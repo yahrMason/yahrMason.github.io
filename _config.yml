@@ -77,6 +77,9 @@ author:
   #     icon: "fab fa-fw fa-linkedin"
   #     url: "https://www.linkedin.com/in/mason-yahr-78974098/"
 
+head_scripts:
+  - https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML
+
 footer:
   links:
     - label: "Twitter"

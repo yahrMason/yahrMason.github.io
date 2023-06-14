@@ -169,10 +169,12 @@ $$
 We find that the slope of our solution at the point t = 0 (with initial condition y = 1 at t = 0) is 0. Euler's method uses this slope value to approximate the value of our solution at the next time point, t = 0.2, using the formula for our differential equation and the length of our time step, 0.2, which we denote using *dt*:
 
 $$
-y_{t+1} = y_t + m_t*dt \\
-y_{0.2} = y_{0} + m_{0}*dt \\
-y_{0.2} = 1 + 0*(0.2) \\
-y_{0.2} = 1 \\
+\begin{align*} 
+y_{t+1} &= y_t + m_t*dt \\
+y_{0.2} &= y_{0} + m_{0}*dt \\
+y_{0.2} &= 1 + 0*(0.2) \\
+y_{0.2} &= 1 \\
+\end{align*}
 $$
 
 We now have a value of our solution with which we can approximate a slope at time t = 0.2
@@ -184,9 +186,9 @@ $$
 and can continue the process of approximating subsequent values using the slopes at the previous time points.
 
 $$
-y_{0.4} &= y_{0.2} + m_{0.2}*dt \\
-y_{0.4} &= 1 + (-0.4)*(0.2) \\
-y_{0.4} &= 0.92
+y_{0.4} = y_{0.2} + m_{0.2}*dt \\
+y_{0.4} = 1 + (-0.4)*(0.2) \\
+y_{0.4} = 0.92
 $$
 
 From this point forward, we simply rinse, wash, and repeat to obtain the approximate values of our solution at each remaining time point.
