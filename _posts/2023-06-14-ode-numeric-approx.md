@@ -283,7 +283,7 @@ plot_approx(our_euler_approx, our_params, "Euler's Method", 'r');
 
 
     
-![png](../assets/2023-06-14-ode-numeric-approx_files/2023-06-14-ode-numeric-approx_14_0.png)
+![png](/assets/2023-06-14-ode-numeric-approx_files/2023-06-14-ode-numeric-approx_14_0.png)
     
 
 
@@ -389,7 +389,7 @@ plot_approx(our_heun_approx, our_params, "Heun's Method", 'g');
 
 
     
-![png](../assets/2023-06-14-ode-numeric-approx_files/2023-06-14-ode-numeric-approx_20_0.png)
+![png](/assets/2023-06-14-ode-numeric-approx_files/2023-06-14-ode-numeric-approx_20_0.png)
     
 
 
@@ -473,7 +473,7 @@ plt.show();
 
 
     
-![png](../assets/2023-06-14-ode-numeric-approx_files/2023-06-14-ode-numeric-approx_22_0.png)
+![png](/assets/2023-06-14-ode-numeric-approx_files/2023-06-14-ode-numeric-approx_22_0.png)
     
 
 
@@ -550,7 +550,7 @@ plot_approx(our_rk_approx, our_params, "Runge-Kutta Method", 'b');
 
 
     
-![png](../assets/2023-06-14-ode-numeric-approx_files/2023-06-14-ode-numeric-approx_28_0.png)
+![png](/assets/2023-06-14-ode-numeric-approx_files/2023-06-14-ode-numeric-approx_28_0.png)
     
 
 
@@ -606,7 +606,7 @@ plt.show();
 
 
     
-![png](../assets/2023-06-14-ode-numeric-approx_files/2023-06-14-ode-numeric-approx_30_0.png)
+![png](/assets/2023-06-14-ode-numeric-approx_files/2023-06-14-ode-numeric-approx_30_0.png)
     
 
 
@@ -652,7 +652,7 @@ plt.show();
 
 
     
-![png](../assets/2023-06-14-ode-numeric-approx_files/2023-06-14-ode-numeric-approx_32_0.png)
+![png](/assets/2023-06-14-ode-numeric-approx_files/2023-06-14-ode-numeric-approx_32_0.png)
     
 
 
@@ -734,7 +734,7 @@ plt.show();
 
 
     
-![png](../assets/2023-06-14-ode-numeric-approx_files/2023-06-14-ode-numeric-approx_40_0.png)
+![png](/assets/2023-06-14-ode-numeric-approx_files/2023-06-14-ode-numeric-approx_40_0.png)
     
 
 
