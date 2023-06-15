@@ -16,9 +16,8 @@
 title: MY
 email: yahr.mason@gmail.com
 description: >- # this means to ignore newlines until "baseurl:"
-  Write an awesome description for your new site here. You can edit this
-  line in _config.yml. It will appear in your document head meta (for
-  Google search results) and in your feed.xml site description.
+  Applied statistician and data scientist.
+  Interested in and Bayesian Modeling and Optimization.
 twitter_username: yahrMason
 github_username: yahrMason
 minimal_mistakes_skin: air
@@ -60,7 +59,7 @@ plugins:
 author:
   name     : "Mason Yahr"
   avatar   : "/assets/images/headshot.jpg"
-  bio      : "Applied statistician and hack developer. Interested in and Bayesian Modeling and Optimization."
+  bio      : "Applied statistician and data scientist. Interested in and Bayesian Modeling and Optimization."
   location : "Milwaukee, WI"
   email    : "yahr.mason@gmail.com"
   twitter  : "yahrMason" 

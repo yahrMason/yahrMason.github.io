@@ -7,7 +7,7 @@ tags: [python, math]
 excerpt: "A review of some of the methods."
 ---
 
-# Comparision of Numerical Methods for solving ODEs
+# Comparision of Methods
 
 ## Intro and Motivation
 
@@ -236,10 +236,10 @@ solution_at_n = our_solution.subs([(t,our_params['t_n'])]).evalf()
 
 # error
 euler_error = abs(euler_at_n - solution_at_n)
-print(euler_error)
+print(f"Eulers Method Error: {round(euler_error,4)}")
 ```
 
-    0.0127890466726292
+    Eulers Method Error: 0.0128
     
 
 We see that the absolute error for our Euler's Method approximation is 0.0128. This is a pretty good result, and we will compare this result with the error from other algorithms down the track.
@@ -283,7 +283,7 @@ plot_approx(our_euler_approx, our_params, "Euler's Method", 'r');
 
 
     
-![png](/assets/2023-06-14-ode-numeric-approx_files/2023-06-14-ode-numeric-approx_14_0.png)
+![png](/assets/2020-11-20-ode-numeric-approx_files/2020-11-20-ode-numeric-approx_14_0.png)
     
 
 
@@ -367,15 +367,16 @@ heun_at_n = our_heun_approx[-1]
 # value of the solution at the last time step
 solution_at_n = our_solution.subs([(t,our_params['t_n'])]).evalf()
 
-# error
+# error and improvement
 heun_error = abs(heun_at_n - solution_at_n)
+heun_improvement = 100*(1-heun_error/euler_error)
 
 # error comparision
-print(heun_error)
-print('Heuns Method Imrovement: ' + str(round(100*(1-heun_error/euler_error),2)) + '%')
+print(f"Heuns Method Error: {round(heun_error,4)}")
+print(f"Heuns Method Imrovement: {round(heun_improvement,2)}%")
 ```
 
-    0.00693415601778322
+    Heuns Method Error: 0.0069
     Heuns Method Imrovement: 45.78%
     
 
@@ -389,7 +390,7 @@ plot_approx(our_heun_approx, our_params, "Heun's Method", 'g');
 
 
     
-![png](/assets/2023-06-14-ode-numeric-approx_files/2023-06-14-ode-numeric-approx_20_0.png)
+![png](/assets/2020-11-20-ode-numeric-approx_files/2020-11-20-ode-numeric-approx_20_0.png)
     
 
 
@@ -473,7 +474,7 @@ plt.show();
 
 
     
-![png](/assets/2023-06-14-ode-numeric-approx_files/2023-06-14-ode-numeric-approx_22_0.png)
+![png](/assets/2020-11-20-ode-numeric-approx_files/2020-11-20-ode-numeric-approx_22_0.png)
     
 
 
@@ -527,17 +528,19 @@ rk_at_n = our_rk_approx[-1]
 # value of the solution at the last time step
 solution_at_n = our_solution.subs([(t,our_params['t_n'])]).evalf()
 
-# error
+# error and improvement
 rk_error = abs(rk_at_n - solution_at_n)
+rk_improvement_euler = 100*(1-rk_error/euler_error)
+rk_improvement_heun = 100*(1-rk_error/heun_error)
 
-print(rk_error)
-print('Runge-Kutta Improvement Over Eulers Method: ' + str(round(100*(1-rk_error/euler_error),2)) + '%')
-print('Runge-Kutta Improvement Over Heun Method: ' + str(round(100*(1-rk_error/heun_error),2)) + '%')
+print(f"Runge-Kutta Error: {round(rk_error,4)}")
+print(f"Runge-Kutta Improvement Over Euler's Method: {round(rk_improvement_euler,2)}%")
+print(f"Runge-Kutta Improvement Over Heun's Method: {round(rk_improvement_heun,2)}%")
 ```
 
-    0.000142055256679326
-    Runge-Kutta Improvement Over Eulers Method: 98.89%
-    Runge-Kutta Improvement Over Heun Method: 97.95%
+    Runge-Kutta Error: 0.0001
+    Runge-Kutta Improvement Over Euler's Method: 98.89%
+    Runge-Kutta Improvement Over Heun's Method: 97.95%
     
 
 We can see from the percent imrpovements in the absolute error that the Runge-Kutta algorithm generates a demonstrably more accurate approximation than our previous two algorithms. (We would certainly hope so given that it is a relatively more complicated algorithm)
@@ -550,7 +553,7 @@ plot_approx(our_rk_approx, our_params, "Runge-Kutta Method", 'b');
 
 
     
-![png](/assets/2023-06-14-ode-numeric-approx_files/2023-06-14-ode-numeric-approx_28_0.png)
+![png](/assets/2020-11-20-ode-numeric-approx_files/2020-11-20-ode-numeric-approx_28_0.png)
     
 
 
@@ -606,7 +609,7 @@ plt.show();
 
 
     
-![png](/assets/2023-06-14-ode-numeric-approx_files/2023-06-14-ode-numeric-approx_30_0.png)
+![png](/assets/2020-11-20-ode-numeric-approx_files/2020-11-20-ode-numeric-approx_30_0.png)
     
 
 
@@ -652,7 +655,7 @@ plt.show();
 
 
     
-![png](/assets/2023-06-14-ode-numeric-approx_files/2023-06-14-ode-numeric-approx_32_0.png)
+![png](/assets/2020-11-20-ode-numeric-approx_files/2020-11-20-ode-numeric-approx_32_0.png)
     
 
 
@@ -700,10 +703,10 @@ To get our value of K, we will grab the first value in the coef_ attribute of th
 
 ```python
 K = regressor.coef_[0]
-print('K Estimate: ' + str(K))
+print(f"K Estimate: {np.round(K,4)}")
 ```
 
-    K Estimate: 0.12733495937131162
+    K Estimate: 0.1273
     
 
 To analyze the quality of the fit, let's look at the r-squared value of our model.
@@ -712,11 +715,12 @@ To analyze the quality of the fit, let's look at the r-squared value of our mode
 ```python
 from sklearn.metrics import r2_score
 predicted = regressor.predict(n_list_transformed)
+r_sqrd = r2_score(error_list, predicted)
 
-print('r-squared: ' + str(r2_score(error_list, predicted)))
+print(f"R-squared: {np.round(r_sqrd,4)}")
 ```
 
-    r-squared: 0.9998653418287083
+    R-squared: 0.9999
     
 
 As we can see our model is able to explain nearly all of the variance in our data. Let's plot our model against the observed errors to visually inspect our model's fit.
@@ -734,7 +738,7 @@ plt.show();
 
 
     
-![png](/assets/2023-06-14-ode-numeric-approx_files/2023-06-14-ode-numeric-approx_40_0.png)
+![png](/assets/2020-11-20-ode-numeric-approx_files/2020-11-20-ode-numeric-approx_40_0.png)
     
 
 
@@ -744,4 +748,4 @@ It looks like we got it.
 
 As I am sure you can imagine, this is barely scratching the surface on numerical techniques to evaluate ODE's, let alone all the other interesting topics surrounding ODE's (my personal favorite is the application of the Laplace Transform to solve ODE's). If you found this work interesting, I highly encourage you to dive into other recourses on the topic. I used Blanchard's text book (ISBN-13: [978-0495561989](https://www.chegg.com/textbooks/differential-equations-with-de-tools-printed-access-card-4th-edition-9781133109037-1133109039)) as my primary recourse to learn about differential equations. The text is very well written and easy to follow. Other recourses that I have found useful include online courses on Udemy, such as [this one](https://www.udemy.com/course/a-complete-first-course-in-differential-equations/). I encourage anyone to defer to the recources that are more alinged with their learning style.
 
-Lastly, I want to sincerely thank you for taking the time to read through my small project on numerical approximations for solutions of first order ODE's. I found the process of investigating these techniques and creating a practical demonstration to be incredibly rewarding. If you have any questions, comments, or suggested improvements, please don't hesitate to reach out to me at yahr.mason@gmail.com
+Lastly, I want to sincerely thank you for taking the time to read through my small project on numerical approximations for solutions of first order ODE's. I found the process of investigating these techniques and creating a practical demonstration to be incredibly rewarding.
