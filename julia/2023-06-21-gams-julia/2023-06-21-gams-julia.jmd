@@ -259,6 +259,8 @@ But how can we determine what the optimal value for lambda should be?
 
 ## Finding Optimal Penalty
 
+One obvious approach to finding the optimal penalty is to use cross validation. In his text, Wood outlines a method of using *Generalized Cross Validation* to determine the optimal penalty. I can't say that I have an intuitive understanding of this method, but it seems fairly similar to leave one out cross validation. 
+I was able to adapt Wood's R code from his text to Julia. The code for these functions are below, and the optimal lambda value for our example is calculated to be around 72.
 
 ```julia
 # Function to calculate GCV for given penalty
