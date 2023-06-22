@@ -1,6 +1,12 @@
 ---
+excerpt: "An exploration of Generalized Additive Models 'from scratch'"
+layout: "posts"
 title: "GAMs in Julia"
-permalink: "/:collection/:name/"
+date: 2023-06-21
+categories: "Bayes"
+tags:
+  - "julia"
+  - "bayes"
 ---
 
 
@@ -539,7 +545,7 @@ plot!(x, mean(pred_smooth;dims=2), color = :green, linewidth = 3, label = "Splin
 
 
 
-Since our outcomes are the same, what are we getting using the Bayesian model over optimizing the λ penalty? 
+Since our outcomes are so similar, what are we getting using the Bayesian model over optimizing the λ penalty? 
 Well, one benefit is that we can use the model posterior to build the [posterior predictive]() distribution for the outcome.
 This gives us a probability distribution over the outcome, which can be useful.
 
@@ -571,7 +577,7 @@ function PartialDepPlot(x,pred)
 end
 
 # Plot the HDI
-PlotCherryData(alpha = 0.1);
+PlotCherryData(alpha = 0.1)
 PartialDepPlot(x, pred_smooth)
 ~~~~~~~~~~~~~
 
@@ -667,13 +673,8 @@ I am certain there is a more elegant "Julian" way to build this, but for now the
     
     ## Likelihood
     y ~ MvNormal(μ, σ)
-end
+end;
 ~~~~~~~~~~~~~
-
-~~~~
-AdditiveModel (generic function with 2 methods)
-~~~~
-
 
 
 
