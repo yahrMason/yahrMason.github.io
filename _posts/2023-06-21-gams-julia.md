@@ -1,5 +1,5 @@
 ---
-excerpt: "An exploration of GAMs 'from scratch'"
+excerpt: "An exploration of GAMs in Julia 'from scratch'"
 layout: "posts"
 title: "Generalized Additive Models in Julia"
 date: 2023-06-21
