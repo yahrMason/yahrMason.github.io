@@ -1,7 +1,7 @@
 ---
 layout: posts
 title: "Numerical Approximations to ODE's"
-date: 2023-06-14
+date: 2020-11-20
 categories: Math
 tags: [python, math]
 excerpt: "A review of some of the methods."
@@ -23,7 +23,7 @@ Seems fairly straight forward right?
 
 It is desireable to find an explicit *solution* to these differential equations, or rather, a function who is related to its own derivative in the way described by the differential equation. But sometimes (basically almost all the time), they can be incredibly difficult or impossible to solve.
 
-Most introductory courses in ordinary differntial equations (Differential equations that don't involve partial derivatives, we refer to them as ODEs) will introduce several specific types of ODEs for which an explicit solution can be found (such as linear ODEs and harmonic oscilators), as well as techniques to solve simpler ones (such as [seperation of variables](https://en.wikipedia.org/wiki/Separation_of_variables) and [integrating factors](https://en.wikipedia.org/wiki/Integrating_factor).
+Most introductory courses in ordinary differntial equations (Differential equations that don't involve partial derivatives, we refer to them as ODEs) will introduce several specific types of ODEs for which an explicit solution can be found (such as linear ODEs and harmonic oscilators), as well as techniques to solve simpler ones (such as [separation of variables](https://en.wikipedia.org/wiki/Separation_of_variables) and [integrating factors](https://en.wikipedia.org/wiki/Integrating_factor).
 
 For the differential equations that we don't yet have a known method for solving, we turn to numerical approximation algorithms to give us an idea of what the behavior of the solution is like. These numerical methods can be computationally arduous, so it is preferable to write code to compute them for us.
 
