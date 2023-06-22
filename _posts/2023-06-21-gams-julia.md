@@ -1,7 +1,7 @@
 ---
-excerpt: "An exploration of Generalized Additive Models 'from scratch'"
+excerpt: "An exploration of GAMs 'from scratch'"
 layout: "posts"
-title: "GAMs in Julia"
+title: "Generalized Additive Models in Julia"
 date: 2023-06-21
 categories: "Bayes"
 tags:
@@ -577,8 +577,8 @@ function PartialDepPlot(x,pred)
 end
 
 # Plot the HDI
-PlotCherryData(alpha = 0.1)
 PartialDepPlot(x, pred_smooth)
+scatter!(x,y,color=:blue,xlabel="Year",ylabel="Day of First Blossom",legend=false,alpha=0.2)
 ~~~~~~~~~~~~~
 
 ![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_18_1.png)\ 
