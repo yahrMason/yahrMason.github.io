@@ -79,17 +79,21 @@ data[!,:doy] = parse.(Float64,data[!,:doy]);
 first(data, 5)
 ```
 
-Our goal is to model the relationship between `doy` (Day of Year) and `year` variables.
-Let's plot the relationship between these columns of the data.
+Our goal is to model the relationship between `doy` (Day of Year) and `year` variables. For this exercise, we will center the `doy` variable to make our spline easier to interpret (more on that later).
 
 ```julia
 # Create x and y variables
 x = data.year;
-y = data.doy;
+y_mean = mean(data.doy);
+y = data.doy .- y_mean;
+```
 
+Let's plot the relationship between these columns of the data.
+
+```julia
 # Make a function to make a scatter plot of the raw data
 function PlotCherryData(; kwargs...)
-    scatter(x,y,label = "Data"; kwargs...)
+    scatter(x,y .+ y_mean,label = "Data"; kwargs...)
     xlabel!("Year")
     ylabel!("Day of First Blossom")
 end;
@@ -135,7 +139,8 @@ xlabel!("Year")
 ```
 
 In order to fit our spline regression model, we need to build a design matrix from our basis object.
-The following code builds our design matrix and plots the matrix using the `heatmap` function.
+The following code builds our design matrix and plots the matrix using the `heatmap` function. 
+The plot displayed below outlines the relative weighting that each basis function has on each value of the domain before it is fit.
 
 ```julia
 # Build a Matrix representation of the Basis
@@ -164,29 +169,44 @@ Now that we have a design matrix built from our basis functions, we can fit our 
 ## Fitting the Spline
 
 The first model we will fit is a simple regression model using OLS. This model won't have a smoothing penalty applied, and will serve as a comparative baseline for the penalized smoothing splines that we fit later.
-We can generate our spline function by multiplying the basis design matrix by the regression coefficients. We will construct our Bayesian model using Turing.
+We can generate our spline function by multiplying the basis design matrix by the regression coefficients, though the `BSplines` package provides nice functionality with the `Spline` struct. We can pass in our basis and weights (from OLS) to build the the resulting spline.
+This struct has a lot of nice methods such as being able to pass in `x` values and it will evaluate the spline at those values (much like a function would) and it has nice plotting utilities as well.
 
 ```julia
 # Fit model with basic OLS
 β_spline = coef(lm(X,y));
+# Define Spline Object
+Spline_OLS = Spline(Basis, β_spline);
 ```
 
 The plots below displays the resulting weighed basis functions, and the resulting spline fit.
+One thing to note, interpreting this plot is why we centered our `doy` variable. It makes the relative basis weightings easier to distinguish.
 
 ```julia
 # Plot Weighted Basis 
-plot(x, β_spline .* Basis, title = "Weighted Basis Functions", legend = false)
+plot(x, β_spline .* Basis, title = "Weighted Basis Functions", label = "")
+plot!(x, Spline_OLS, color = :black, linewidth = 3, label = "Spline Fit", legend = true)
 ylabel!("Basis * Weight")
 xlabel!("Year")
 ```
 
+And we can inspect the fit to our data:
+
 ```julia
 # Plot Data and Spline
 PlotCherryData(alpha = 0.20)
-plot!(x, sum(β_spline .* Basis), color = :black, linewidth = 3, label = "Basic Spline")
+
+plot!(
+    x,
+    # evaluate spline at x and add mean
+    Spline_OLS.(x) .+ y_mean, 
+    color = :black, 
+    linewidth = 3, 
+    label = "Spline Fit"
+)
 ```
 
-From the plot above, it can be seen the the resulting spline fit to the data is rather "wiggly" and not smooth.
+From the plot above, it can be seen the the resulting spline fit to the data is rather "wiggly" and not smooth. It is likely to be overfit. Let's explore some ways to improve our model's fit.
 
 ## Making it Smooth
 
@@ -246,12 +266,15 @@ end
 
 Xp, yp = PenaltyMatrix(Basis, λ, x, y);
 
+# Fit Penalized Spline
 β_penalized = coef(lm(Xp,yp));
+# Define Penalized Spline Object
+Spline_penalized = Spline(Basis, β_penalized);
 
 # Plot Data and Spline
 PlotCherryData(alpha = 0.20)
-plot!(x, sum(β_spline .* Basis), color = :black, linewidth = 3, label = "Basic Spline")
-plot!(x, sum(β_penalized .* Basis), color = :red, linewidth = 3, label = "Penalized Spline")
+plot!(x, Spline_OLS.(x) .+ y_mean, color = :black, linewidth = 3, label = "Basic Spline")
+plot!(x, Spline_penalized.(x) .+ y_mean, color = :red, linewidth = 3, label = "Penalized Spline")
 ```
 
 From the plot above we can see that the red penalized spline with `λ = 1` is smoother than the black basic spline fit.
@@ -302,12 +325,15 @@ Now that we have obtained an optimal value for lambda, we can build the penalize
 ```julia
 Xp_opt, yp_opt = PenaltyMatrix(Basis, λ_opt, x, y);
 
+# Fit Optimized Spline
 β_opt = coef(lm(Xp_opt,yp_opt));
+# Define Optimized Spline Object
+Spline_opt = Spline(Basis, β_opt);
 
 PlotCherryData(alpha=0.2)
-plot!(x, sum(β_spline .* Basis), color = :black, linewidth = 3, label = "Basic Spline")
-plot!(x, sum(β_penalized .* Basis), color = :red, linewidth = 3, label = "Spline: λ = 1")
-plot!(x, sum(β_opt .* Basis), color = :blue, linewidth = 3, label = "Spline: λ = $(round(λ_opt,digits=3))")
+plot!(x, Spline_OLS.(x) .+ y_mean, color = :black, linewidth = 3, label = "Basic Spline")
+plot!(x, Spline_penalized.(x) .+ y_mean, color = :red, linewidth = 3, label = "Spline: λ = 1")
+plot!(x, Spline_opt.(x) .+ y_mean, color = :blue, linewidth = 3, label = "Spline: λ = $(round(λ_opt,digits=3))")
 ```
 
 It is clear that the blue spline, with penalty of λ = 72.198 is far smoother than the other splines we fit. That is exactly what we were looking for, but this is not the only avenue to obtain this result.
@@ -390,9 +416,12 @@ end;
 We will use MCMC to perform inference. The following code will use the No U-turn (NUTS) sampler to draw 1000 samples from the posterior. Typically it is advised to run multiple chains, see the [Turing docs](https://turing.ml/v0.22/docs/using-turing/guide#sampling-multiple-chains), but for this demo we will use just a single chain.
 Turing has a lot of neat features, such as the ability to simply call `summarystats(chain)` to assess model convergence.
 
+One thing to note: Since we are fitting the y-intercept variable `α` in this model, there is no need to use the centered version of y here.
+
 ```julia
 # Define Model Function
-spline_mod = SmoothSplineModel(X_fe, Z_re, y, 100, 10, 5, 5);
+## Note adding y_mean back to y
+spline_mod = SmoothSplineModel(X_fe, Z_re, y .+ y_mean, 100, 10, 5, 5);
 
 # MCMC Sampling
 chain_smooth = sample(spline_mod, NUTS(), 1_000);
@@ -416,7 +445,7 @@ The following plot compares the original spline model to the smoothing spline mo
 ```julia
 # Plot Data and Splines
 PlotCherryData(alpha=0.2)
-plot!(x, sum(β_opt .* Basis), color = :blue, linewidth = 3, label = "Spline: λ = $(round(λ_opt,digits=3))")
+plot!(x, Spline_opt.(x) .+ y_mean, color = :blue, linewidth = 3, label = "Spline: λ = $(round(λ_opt,digits=3))")
 plot!(x, mean(pred_smooth;dims=2), color = :green, linewidth = 3, label = "Spline: Bayes")
 ```
 
@@ -453,7 +482,14 @@ end
 
 # Plot the HDI
 PartialDepPlot(x, pred_smooth)
-scatter!(x,y,color=:blue,xlabel="Year",ylabel="Day of First Blossom",legend=false,alpha=0.2)
+scatter!(
+    x, y .+ y_mean,
+    color=:blue,
+    xlabel="Year",
+    ylabel="Day of First Blossom",
+    legend=false,
+    alpha=0.2
+)
 ```
 
 ## More Variables: Building an Additive Model

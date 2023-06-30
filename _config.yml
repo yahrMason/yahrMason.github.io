@@ -22,6 +22,7 @@ twitter_username: yahrMason
 github_username: yahrMason
 minimal_mistakes_skin: air
 search: true
+google_analytics: G-CQ1TYL4K9J
 
 # Build settings
 markdown: kramdown

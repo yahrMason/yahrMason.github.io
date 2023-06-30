@@ -99,17 +99,24 @@ first(data, 5)
 
 
 
-Our goal is to model the relationship between `doy` (Day of Year) and `year` variables.
-Let's plot the relationship between these columns of the data.
+Our goal is to model the relationship between `doy` (Day of Year) and `year` variables. For this exercise, we will center the `doy` variable to make our spline easier to interpret (more on that later).
 
 {% highlight julia %}
 # Create x and y variables
 x = data.year;
-y = data.doy;
+y_mean = mean(data.doy);
+y = data.doy .- y_mean;
+{% endhighlight %}
 
+
+
+
+Let's plot the relationship between these columns of the data.
+
+{% highlight julia %}
 # Make a function to make a scatter plot of the raw data
 function PlotCherryData(; kwargs...)
-    scatter(x,y,label = "Data"; kwargs...)
+    scatter(x,y .+ y_mean,label = "Data"; kwargs...)
     xlabel!("Year")
     ylabel!("Day of First Blossom")
 end;
@@ -118,7 +125,7 @@ end;
 PlotCherryData()
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_3_1.png)\ 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_4_1.png)\ 
 
 
 
@@ -159,13 +166,14 @@ plot(Basis, title = "Basis Functions", legend = false)
 xlabel!("Year")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_4_1.png)\ 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_5_1.png)\ 
 
 
 
 
 In order to fit our spline regression model, we need to build a design matrix from our basis object.
-The following code builds our design matrix and plots the matrix using the `heatmap` function.
+The following code builds our design matrix and plots the matrix using the `heatmap` function. 
+The plot displayed below outlines the relative weighting that each basis function has on each value of the domain before it is fit.
 
 {% highlight julia %}
 # Build a Matrix representation of the Basis
@@ -189,7 +197,7 @@ ylabel!("Observation Number")
 xlabel!("Basis Function")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_5_1.png)\ 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_6_1.png)\ 
 
 
 
@@ -199,32 +207,28 @@ Now that we have a design matrix built from our basis functions, we can fit our 
 ## Fitting the Spline
 
 The first model we will fit is a simple regression model using OLS. This model won't have a smoothing penalty applied, and will serve as a comparative baseline for the penalized smoothing splines that we fit later.
-We can generate our spline function by multiplying the basis design matrix by the regression coefficients. We will construct our Bayesian model using Turing.
+We can generate our spline function by multiplying the basis design matrix by the regression coefficients, though the `BSplines` package provides nice functionality with the `Spline` struct. We can pass in our basis and weights (from OLS) to build the the resulting spline.
+This struct has a lot of nice methods such as being able to pass in `x` values and it will evaluate the spline at those values (much like a function would) and it has nice plotting utilities as well.
 
 {% highlight julia %}
 # Fit model with basic OLS
 β_spline = coef(lm(X,y));
+# Define Spline Object
+Spline_OLS = Spline(Basis, β_spline);
 {% endhighlight %}
 
 
 
 
 The plots below displays the resulting weighed basis functions, and the resulting spline fit.
+One thing to note, interpreting this plot is why we centered our `doy` variable. It makes the relative basis weightings easier to distinguish.
 
 {% highlight julia %}
 # Plot Weighted Basis 
-plot(x, β_spline .* Basis, title = "Weighted Basis Functions", legend = false)
+plot(x, β_spline .* Basis, title = "Weighted Basis Functions", label = "")
+plot!(x, Spline_OLS, color = :black, linewidth = 3, label = "Spline Fit", legend = true)
 ylabel!("Basis * Weight")
 xlabel!("Year")
-{% endhighlight %}
-
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_7_1.png)\ 
-
-
-{% highlight julia %}
-# Plot Data and Spline
-PlotCherryData(alpha = 0.20)
-plot!(x, sum(β_spline .* Basis), color = :black, linewidth = 3, label = "Basic Spline")
 {% endhighlight %}
 
 ![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_8_1.png)\ 
@@ -232,7 +236,28 @@ plot!(x, sum(β_spline .* Basis), color = :black, linewidth = 3, label = "Basic 
 
 
 
-From the plot above, it can be seen the the resulting spline fit to the data is rather "wiggly" and not smooth.
+And we can inspect the fit to our data:
+
+{% highlight julia %}
+# Plot Data and Spline
+PlotCherryData(alpha = 0.20)
+
+plot!(
+    x,
+    # evaluate spline at x and add mean
+    Spline_OLS.(x) .+ y_mean, 
+    color = :black, 
+    linewidth = 3, 
+    label = "Spline Fit"
+)
+{% endhighlight %}
+
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_9_1.png)\ 
+
+
+
+
+From the plot above, it can be seen the the resulting spline fit to the data is rather "wiggly" and not smooth. It is likely to be overfit. Let's explore some ways to improve our model's fit.
 
 ## Making it Smooth
 
@@ -295,15 +320,18 @@ end
 
 Xp, yp = PenaltyMatrix(Basis, λ, x, y);
 
+# Fit Penalized Spline
 β_penalized = coef(lm(Xp,yp));
+# Define Penalized Spline Object
+Spline_penalized = Spline(Basis, β_penalized);
 
 # Plot Data and Spline
 PlotCherryData(alpha = 0.20)
-plot!(x, sum(β_spline .* Basis), color = :black, linewidth = 3, label = "Basic Spline")
-plot!(x, sum(β_penalized .* Basis), color = :red, linewidth = 3, label = "Penalized Spline")
+plot!(x, Spline_OLS.(x) .+ y_mean, color = :black, linewidth = 3, label = "Basic Spline")
+plot!(x, Spline_penalized.(x) .+ y_mean, color = :red, linewidth = 3, label = "Penalized Spline")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_10_1.png)\ 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_11_1.png)\ 
 
 
 
@@ -359,15 +387,18 @@ Now that we have obtained an optimal value for lambda, we can build the penalize
 {% highlight julia %}
 Xp_opt, yp_opt = PenaltyMatrix(Basis, λ_opt, x, y);
 
+# Fit Optimized Spline
 β_opt = coef(lm(Xp_opt,yp_opt));
+# Define Optimized Spline Object
+Spline_opt = Spline(Basis, β_opt);
 
 PlotCherryData(alpha=0.2)
-plot!(x, sum(β_spline .* Basis), color = :black, linewidth = 3, label = "Basic Spline")
-plot!(x, sum(β_penalized .* Basis), color = :red, linewidth = 3, label = "Spline: λ = 1")
-plot!(x, sum(β_opt .* Basis), color = :blue, linewidth = 3, label = "Spline: λ = $(round(λ_opt,digits=3))")
+plot!(x, Spline_OLS.(x) .+ y_mean, color = :black, linewidth = 3, label = "Basic Spline")
+plot!(x, Spline_penalized.(x) .+ y_mean, color = :red, linewidth = 3, label = "Spline: λ = 1")
+plot!(x, Spline_opt.(x) .+ y_mean, color = :blue, linewidth = 3, label = "Spline: λ = $(round(λ_opt,digits=3))")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_12_1.png)\ 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_13_1.png)\ 
 
 
 
@@ -458,9 +489,12 @@ end;
 We will use MCMC to perform inference. The following code will use the No U-turn (NUTS) sampler to draw 1000 samples from the posterior. Typically it is advised to run multiple chains, see the [Turing docs](https://turing.ml/v0.22/docs/using-turing/guide#sampling-multiple-chains), but for this demo we will use just a single chain.
 Turing has a lot of neat features, such as the ability to simply call `summarystats(chain)` to assess model convergence.
 
+One thing to note: Since we are fitting the y-intercept variable `α` in this model, there is no need to use the centered version of y here.
+
 {% highlight julia %}
 # Define Model Function
-spline_mod = SmoothSplineModel(X_fe, Z_re, y, 100, 10, 5, 5);
+## Note adding y_mean back to y
+spline_mod = SmoothSplineModel(X_fe, Z_re, y .+ y_mean, 100, 10, 5, 5);
 
 # MCMC Sampling
 chain_smooth = sample(spline_mod, NUTS(), 1_000);
@@ -476,39 +510,39 @@ Summary Statistics
       Symbol    Float64   Float64    Float64   Float64    Float64   Float64
     ⋯
 
-           α   100.7245    5.7284     0.1811    0.3041   404.0234    1.0007
+           α   100.9578    5.6333     0.1781    0.2900   371.9183    0.9990
     ⋯
-        B[1]    -0.9087    5.8662     0.1855    0.3069   387.6929    0.9997
+        B[1]    -1.1778    5.6998     0.1802    0.2881   356.6087    0.9991
     ⋯
-        B[2]     1.4121    5.6707     0.1793    0.2980   412.1859    1.0012
+        B[2]     1.2111    5.5418     0.1752    0.2848   369.8150    0.9990
     ⋯
-         μ_b    -0.4046    0.7199     0.0228    0.0276   631.3371    0.9994
+         μ_b    -0.3800    0.6335     0.0200    0.0211   702.2543    0.9991
     ⋯
-         σ_b     2.4099    1.3013     0.0411    0.1285   109.4226    0.9999
+         σ_b     2.2553    1.1081     0.0350    0.1023    76.1735    1.0261
     ⋯
-        b[1]     0.0158    2.3636     0.0747    0.1158   374.9430    1.0038
+        b[1]    -0.1599    2.1407     0.0677    0.0843   507.3550    0.9996
     ⋯
-        b[2]    -1.0021    1.8532     0.0586    0.0852   599.8406    1.0001
+        b[2]    -0.8512    1.8899     0.0598    0.0674   527.4515    1.0007
     ⋯
-        b[3]    -2.0444    1.7129     0.0542    0.0960   362.6718    0.9998
+        b[3]    -2.0182    1.6583     0.0524    0.0862   336.3577    0.9990
     ⋯
-        b[4]    -0.5341    1.6501     0.0522    0.0831   436.8299    1.0055
+        b[4]    -0.5716    1.5628     0.0494    0.0594   800.0749    0.9997
     ⋯
-        b[5]     0.7402    1.7728     0.0561    0.0872   424.6244    1.0027
+        b[5]     0.7625    1.6226     0.0513    0.0569   890.2162    1.0007
     ⋯
-        b[6]     2.9408    2.3164     0.0732    0.1970   155.2558    0.9999
+        b[6]     2.7054    2.2498     0.0711    0.1585   135.8350    1.0154
     ⋯
-        b[7]    -2.5384    2.5569     0.0809    0.2331   130.3484    1.0000
+        b[7]    -2.3017    2.4691     0.0781    0.1916   117.8017    1.0097
     ⋯
-        b[8]     0.4037    1.9761     0.0625    0.1504   178.5638    1.0003
+        b[8]     0.3076    1.7181     0.0543    0.0777   375.2523    0.9993
     ⋯
-        b[9]     0.1127    1.6944     0.0536    0.0893   339.1566    1.0008
+        b[9]     0.1552    1.6209     0.0513    0.0622   605.8256    1.0024
     ⋯
-       b[10]    -0.7577    1.7918     0.0567    0.0915   405.7169    1.0019
+       b[10]    -0.7186    1.6908     0.0535    0.0960   281.5948    1.0052
     ⋯
-       b[11]     0.8570    2.0056     0.0634    0.1431   203.4626    1.0021
+       b[11]     0.7085    1.8439     0.0583    0.1153   205.5236    1.0069
     ⋯
-       b[12]    -2.1061    1.7970     0.0568    0.1329   173.6762    1.0053
+       b[12]    -1.8647    1.7745     0.0561    0.0797   554.2207    1.0004
     ⋯
       ⋮           ⋮          ⋮         ⋮          ⋮         ⋮          ⋮   
     ⋱
@@ -538,11 +572,11 @@ The following plot compares the original spline model to the smoothing spline mo
 {% highlight julia %}
 # Plot Data and Splines
 PlotCherryData(alpha=0.2)
-plot!(x, sum(β_opt .* Basis), color = :blue, linewidth = 3, label = "Spline: λ = $(round(λ_opt,digits=3))")
+plot!(x, Spline_opt.(x) .+ y_mean, color = :blue, linewidth = 3, label = "Spline: λ = $(round(λ_opt,digits=3))")
 plot!(x, mean(pred_smooth;dims=2), color = :green, linewidth = 3, label = "Spline: Bayes")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_17_1.png)\ 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_18_1.png)\ 
 
 
 
@@ -580,10 +614,17 @@ end
 
 # Plot the HDI
 PartialDepPlot(x, pred_smooth)
-scatter!(x,y,color=:blue,xlabel="Year",ylabel="Day of First Blossom",legend=false,alpha=0.2)
+scatter!(
+    x, y .+ y_mean,
+    color=:blue,
+    xlabel="Year",
+    ylabel="Day of First Blossom",
+    legend=false,
+    alpha=0.2
+)
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_18_1.png)\ 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_19_1.png)\ 
 
 
 
@@ -614,7 +655,7 @@ plot(
 )
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_19_1.png)\ 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_20_1.png)\ 
 
 
 
@@ -716,7 +757,7 @@ plot(GirthPlot, HeightPlot, plot_title = "Partial Dependence Plots")
 ylabel!("Tree Volume")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_23_1.png)\ 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_24_1.png)\ 
 
 
 
@@ -738,7 +779,7 @@ xlabel!("Tree Volume");
 ylabel!("Predicted Volume")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_24_1.png)\ 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_25_1.png)\ 
 
 
 
