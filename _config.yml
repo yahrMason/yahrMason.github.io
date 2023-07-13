@@ -22,7 +22,13 @@ twitter_username: yahrMason
 github_username: yahrMason
 minimal_mistakes_skin: air
 search: true
-google_analytics: G-CQ1TYL4K9J
+# google_analytics: G-CQ1TYL4K9J
+
+analytics:
+  provider: "google-gtag"
+  google:
+    tracking_id: "G-CQ1TYL4K9J"
+    anonymize_ip: false # default
 
 # Build settings
 markdown: kramdown
