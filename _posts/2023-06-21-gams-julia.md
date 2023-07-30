@@ -138,7 +138,7 @@ We will explore this relationship using B-Splines
 There are two parameters we need to define our basis with the `BSplines` package. These parameters are the number of knots (or breakpoints) and the order of the basis functions.
 It should be noted that the order of a basis function is equal to the degree plus 1. For example, if we want to use cubic basis functions (degree 3), the order is equal to `3+1=4`.
 
-For these data, we will use a cubic spline (order = 4). But how many knots should we choose? In this case, we will use 25 knots. The choice for using a relatively large number of knots will produce a rather "wiggly" fit.  In Chapter 4 section 2 of his text, Simon Wood recommends choosing a number of knots that is larger than needed and induce smoothing later.
+For these data, we will use a cubic spline (order = 4). But how many knots should we choose? In this case, we will use 15 knots. The choice for using a relatively large number of knots will produce a rather "wiggly" fit.  In Chapter 4 section 2 of his text, Simon Wood recommends choosing a number of knots that is larger than needed and induce smoothing later.
 
 The following code builds the knots at the quantiles of the independent variable and builds the basis.
 We can simply call the `plot` function on the `basis` object to view the basis functions.
