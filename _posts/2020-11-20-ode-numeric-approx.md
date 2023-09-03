@@ -109,15 +109,11 @@ To demonstrate how sympy expressions work, we will use the subs method to pass i
 
 
 ```python
-our_solution.subs([(t,0)])
+print(our_solution.subs([(t,0)]))
 ```
 
-
-
-
-$\displaystyle 1$
-
-
+    1
+    
 
 And we get 1 as expected.
 
@@ -218,7 +214,7 @@ def euler(de, param):
         # append estimated value
         y_hat.append(y_k_hat)
         
-    return np.array(y_hat).tolist()
+    return y_hat
 
 our_euler_approx = euler(our_ode, our_params)
 ```
