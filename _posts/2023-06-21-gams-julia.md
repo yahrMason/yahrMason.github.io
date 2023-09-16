@@ -125,7 +125,7 @@ end;
 PlotCherryData()
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_4_1.png)\ 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_4_1.png) 
 
 
 
@@ -166,7 +166,7 @@ plot(Basis, title = "Basis Functions", legend = false)
 xlabel!("Year")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_5_1.png)\ 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_5_1.png) 
 
 
 
@@ -197,7 +197,7 @@ ylabel!("Observation Number")
 xlabel!("Basis Function")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_6_1.png)\ 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_6_1.png) 
 
 
 
@@ -231,7 +231,7 @@ ylabel!("Basis * Weight")
 xlabel!("Year")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_8_1.png)\ 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_8_1.png) 
 
 
 
@@ -252,7 +252,7 @@ plot!(
 )
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_9_1.png)\ 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_9_1.png) 
 
 
 
@@ -331,7 +331,7 @@ plot!(x, Spline_OLS.(x) .+ y_mean, color = :black, linewidth = 3, label = "Basic
 plot!(x, Spline_penalized.(x) .+ y_mean, color = :red, linewidth = 3, label = "Penalized Spline")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_11_1.png)\ 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_11_1.png) 
 
 
 
@@ -398,7 +398,7 @@ plot!(x, Spline_penalized.(x) .+ y_mean, color = :red, linewidth = 3, label = "S
 plot!(x, Spline_opt.(x) .+ y_mean, color = :blue, linewidth = 3, label = "Spline: λ = $(round(λ_opt,digits=3))")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_13_1.png)\ 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_13_1.png) 
 
 
 
@@ -576,7 +576,7 @@ plot!(x, Spline_opt.(x) .+ y_mean, color = :blue, linewidth = 3, label = "Spline
 plot!(x, mean(pred_smooth;dims=2), color = :green, linewidth = 3, label = "Spline: Bayes")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_18_1.png)\ 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_18_1.png) 
 
 
 
@@ -624,7 +624,7 @@ scatter!(
 )
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_19_1.png)\ 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_19_1.png) 
 
 
 
@@ -655,7 +655,7 @@ plot(
 )
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_20_1.png)\ 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_20_1.png) 
 
 
 
@@ -757,7 +757,7 @@ plot(GirthPlot, HeightPlot, plot_title = "Partial Dependence Plots")
 ylabel!("Tree Volume")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_24_1.png)\ 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_24_1.png) 
 
 
 
@@ -779,7 +779,7 @@ xlabel!("Tree Volume");
 ylabel!("Predicted Volume")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_25_1.png)\ 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_25_1.png) 
 
 
 

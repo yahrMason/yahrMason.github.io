@@ -1,5 +1,5 @@
 ## Julia Mardown File Path
-file_name = "2023-09-16-mcmc-gif"
+file_name = "2023-06-21-gams-julia"
 
 home_dir = homedir()
 repo_dir = "$home_dir\\Documents\\GitHub\\yahrMason.github.io"
