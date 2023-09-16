@@ -32,6 +32,7 @@ rm(figure_src)
 # Adjust Figure MD path
 md_str = read("julia/$file_name/$file_name.md", String)
 md_str = replace(md_str, "![](figures/" => "![png](/assets/$(file_name)_files/")
+md_str = replace(md_str, ")\\" => ")")
 md_str = replace(md_str, "~~~~{.julia}" => "{% highlight julia %}")
 md_str = replace(md_str, "~~~~~~~~~~~~~" => "{% endhighlight %}")
 md_str = replace(md_str, "~~~~" => "")
