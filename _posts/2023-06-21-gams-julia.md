@@ -26,7 +26,7 @@ My quest to figure out how to code up these models started at this [reply](https
 Fitting a mixed effects model using MCMC (aka a Bayesian Hierarchical Model)? That sure caught my attention. So I took a look at [the paper](https://onlinelibrary.wiley.com/doi/abs/10.1002/sim.2193) referenced in the thread. I quickly realized that if I wanted to build a GAM from scratch, I needed to find a resource that had code.
 My search then lead me to [Tristan Mahr's FANTASTIC blog post](https://www.tjmahr.com/random-effects-penalized-splines-same-thing/) on penalized splines. Serious props to Tristan. His post does an excellent job of building the intuition of how mixed effects models related to penalized smoothing splines.
 His post references the work of Simon Wood on Generalized Additive Models multiple times, so I figured it would behoove me to go right to the source and pick up a copy of [his textbook](https://www.taylorfrancis.com/books/mono/10.1201/9781315370279/generalized-additive-models-simon-wood) on the subject.
-This text is a must read for anyone looking to implement GAMs from scratch. Most of my Julia code is adapted from his R code that builds these from scratch.
+This text is a must read for anyone looking to implement GAMs from scratch. Most of my Julia code is adapted from his R code.
 
 ### What This Post is
 The goal of this post is to demonstrate how to use Julia to fit penalized, smooth splines and additive models to data. It seemed to me that there were sparse resources freely available on the internet that demonstrated how to do this, so I am going to attempt to fill that void.
@@ -83,7 +83,7 @@ data[!,:doy] = parse.(Float64,data[!,:doy]);
 first(data, 5)
 {% endhighlight %}
 
-~~~~
+
 5×5 DataFrame
  Row │ year   doy      temp     temp_upper  temp_lower
      │ Int64  Float64  String7  String7     String7
@@ -93,7 +93,7 @@ first(data, 5)
    3 │   831     96.0  NA       NA          NA
    4 │   851    108.0  7.38     12.1        2.66
    5 │   853    104.0  NA       NA          NA
-~~~~
+
 
 
 
@@ -138,7 +138,7 @@ We will explore this relationship using B-Splines
 There are two parameters we need to define our basis with the `BSplines` package. These parameters are the number of knots (or breakpoints) and the order of the basis functions.
 It should be noted that the order of a basis function is equal to the degree plus 1. For example, if we want to use cubic basis functions (degree 3), the order is equal to `3+1=4`.
 
-For these data, we will use a cubic spline (order = 4). But how many knots should we choose? In this case, we will use 15 knots. The choice for using a relatively large number of knots will produce a rather "wiggly" fit.  In Chapter 4 section 2 of his text, Simon Wood recommends choosing a number of knots that is larger than needed and induce smoothing later.
+For these data, we will use a cubic spline (order = 4). But how many knots should we choose? In this case, we will use 25 knots. The choice for using a relatively large number of knots will produce a rather "wiggly" fit.  In Chapter 4 section 2 of his text, Simon Wood recommends choosing a number of knots that is larger than needed and induce smoothing later.
 
 The following code builds the knots at the quantiles of the independent variable and builds the basis.
 We can simply call the `plot` function on the `basis` object to view the basis functions.
@@ -503,7 +503,7 @@ chain_smooth = sample(spline_mod, NUTS(), 1_000);
 summarystats(chain_smooth)
 {% endhighlight %}
 
-~~~~
+
 Summary Statistics
   parameters       mean       std   naive_se      mcse        ess      rhat
     ⋯
@@ -548,7 +548,7 @@ Summary Statistics
     ⋱
                                                      1 column and 4 rows om
 itted
-~~~~
+
 
 
 

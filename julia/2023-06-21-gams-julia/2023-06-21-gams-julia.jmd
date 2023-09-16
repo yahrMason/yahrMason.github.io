@@ -25,7 +25,7 @@ My quest to figure out how to code up these models started at this [reply](https
 Fitting a mixed effects model using MCMC (aka a Bayesian Hierarchical Model)? That sure caught my attention. So I took a look at [the paper](https://onlinelibrary.wiley.com/doi/abs/10.1002/sim.2193) referenced in the thread. I quickly realized that if I wanted to build a GAM from scratch, I needed to find a resource that had code.
 My search then lead me to [Tristan Mahr's FANTASTIC blog post](https://www.tjmahr.com/random-effects-penalized-splines-same-thing/) on penalized splines. Serious props to Tristan. His post does an excellent job of building the intuition of how mixed effects models related to penalized smoothing splines.
 His post references the work of Simon Wood on Generalized Additive Models multiple times, so I figured it would behoove me to go right to the source and pick up a copy of [his textbook](https://www.taylorfrancis.com/books/mono/10.1201/9781315370279/generalized-additive-models-simon-wood) on the subject.
-This text is a must read for anyone looking to implement GAMs from scratch. Most of my Julia code is adapted from his R code that builds these from scratch.
+This text is a must read for anyone looking to implement GAMs from scratch. Most of my Julia code is adapted from his R code.
 
 ### What This Post is
 The goal of this post is to demonstrate how to use Julia to fit penalized, smooth splines and additive models to data. It seemed to me that there were sparse resources freely available on the internet that demonstrated how to do this, so I am going to attempt to fill that void.
