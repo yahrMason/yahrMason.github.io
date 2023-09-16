@@ -11,7 +11,7 @@ weave_options:
 
 ## Introduction
 
-One of my favorite aspects about Julia is how simple it is to build really high quality graphs and plots, and rather simply at that.
+One of my favorite aspects about Julia is how simple it is to build really high quality graphs and plots.
 I have used base plotting and `{ggplot2}` in R as well as `matplotlib` in python for several years. Those packages are great, and I think `Plots.jl` has a place among them. 
 It has several cool features out of the box that are super easy to use, and boasts a "time to first (beautiful) plot" that is competitive.
 As the Julia data science community continues to grow, several other plotting libraries have emerged such as [makie.jl](https://docs.makie.org/stable/) and [Algebra of Graphics](https://aog.makie.org/stable/).
