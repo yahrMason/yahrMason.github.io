@@ -1,11 +1,10 @@
 source "https://rubygems.org"
 
-gem "github-pages", group: :jekyll_plugins
-
+gem "jekyll", "~> 4.3"
 gem "tzinfo-data"
+gem "webrick", "~> 1.8"
 gem "wdm", "~> 0.1.0" if Gem.win_platform?
 
-# If you have any plugins, put them here!
 group :jekyll_plugins do
   gem "jekyll-paginate"
   gem "jekyll-sitemap"
@@ -15,5 +14,3 @@ group :jekyll_plugins do
   gem "jekyll-include-cache"
   gem "jekyll-algolia"
 end
-
-gem "webrick", "~> 1.8"
