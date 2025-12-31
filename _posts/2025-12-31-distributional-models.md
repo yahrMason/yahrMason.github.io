@@ -18,22 +18,32 @@ Another use case is when you’re tackling a regression problem but actually car
 
 
 ```python
+import os
+import warnings
+import random
+
+# Suppress threadpoolctl warning about OpenMP conflicts BEFORE importing anything else
+warnings.filterwarnings('ignore', category=RuntimeWarning)
+
+# Set MKL to use TBB threading instead of Intel OpenMP to avoid conflicts with LLVM OpenMP
+# TBB (Threading Building Blocks) is more compatible with mixed OpenMP environments
+os.environ["MKL_THREADING_LAYER"] = "TBB"
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+
 import numpy as np
 import polars as pl
 import pymc as pm
-import pytensor as pt
 import arviz as az
-from scipy.special import expit, logit
-from scipy.stats import norm, bernoulli, betabinom, poisson
-from scipy.stats import beta as beta_dist
+from scipy.stats import norm
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.linear_model import LogisticRegression
 
-from typing import Tuple
-
-import os
-os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE" # was getting a weird warning. Chat-GPT told me to do this.
+# Set seed for reproducibility
+SEED = 42
+np.random.seed(SEED)
+random.seed(SEED)
+pm.seed(SEED)
 ```
 
 The first step of any model-building process is data ~cleaning simulating~ synthetic data. Anyone familiar with Richard McElreath’s Statistical Rethinking will understand why: simulation lets us test whether a proposed model can recover the parameters that generated the data in the first place. I find this especially valuable in distributional modeling, where assumptions about variance and scale matter as much as assumptions about the mean.
@@ -97,19 +107,12 @@ def plot_residual_by_x(
     return ax
 
 
-plot_residual_by_x(df, 'x', 'y_pred', 'y')
+plot_residual_by_x(df, 'x', 'y_pred', 'y');
 ```
 
 
-
-
-    <Axes: title={'center': 'Residual by x'}, xlabel='x', ylabel='Residual (y - y_pred)'>
-
-
-
-
     
-![png](/assets/2025-12-31-distributional-models_files/2025-12-31-distributional-models_8_1.png)
+![png](/assets/2025-12-31-distributional-models_files/2025-12-31-distributional-models_8_0.png)
     
 
 
@@ -144,7 +147,7 @@ def plot_mse_by_x(df:pl.DataFrame, x_col:str, y_pred_col:str, y_col:str, bins:in
     y_pred = df[y_pred_col].to_numpy()
     y = df[y_col].to_numpy()
     rmse = np.sqrt(np.mean((y - y_pred) **2))
-    print(rmse)
+    print('Overall RMSE:', rmse)
 
     plt.plot(
         plot_df['x_bin'].to_numpy(),
@@ -166,7 +169,7 @@ def plot_mse_by_x(df:pl.DataFrame, x_col:str, y_pred_col:str, y_col:str, bins:in
 plot_mse_by_x(df, 'x', 'y_pred', 'y')
 ```
 
-    3.0589007412130345
+    Overall RMSE: 5.124588433586896
     
 
 
@@ -226,16 +229,6 @@ with model:
 az.summary(idata)
 ```
 
-    c:\Users\mason\miniforge3\envs\pymc_env\Lib\site-packages\threadpoolctl.py:1226: RuntimeWarning: 
-    Found Intel OpenMP ('libiomp') and LLVM OpenMP ('libomp') loaded at
-    the same time. Both libraries are known to be incompatible and this
-    can cause random crashes or deadlocks on Linux when loaded in the
-    same Python program.
-    Using threadpoolctl may cause crashes or deadlocks. For more
-    information and possible workarounds, please see
-        https://github.com/joblib/threadpoolctl/blob/master/multiple_openmp.md
-    
-      warnings.warn(msg, RuntimeWarning)
     Initializing NUTS using jitter+adapt_diag...
     Multiprocess sampling (4 chains in 4 jobs)
     NUTS: [intercept, beta, y_new]
@@ -250,7 +243,7 @@ az.summary(idata)
 
 
 
-    Sampling 4 chains for 1_000 tune and 1_000 draw iterations (4_000 + 4_000 draws total) took 70 seconds.
+    Sampling 4 chains for 1_000 tune and 1_000 draw iterations (4_000 + 4_000 draws total) took 32 seconds.
     
 
 
@@ -288,63 +281,63 @@ az.summary(idata)
   <tbody>
     <tr>
       <th>intercept</th>
-      <td>-0.001</td>
+      <td>-0.007</td>
       <td>0.023</td>
-      <td>-0.044</td>
-      <td>0.042</td>
+      <td>-0.050</td>
+      <td>0.034</td>
       <td>0.001</td>
       <td>0.000</td>
-      <td>1392.0</td>
-      <td>1849.0</td>
-      <td>1.01</td>
+      <td>1775.0</td>
+      <td>2180.0</td>
+      <td>1.0</td>
     </tr>
     <tr>
       <th>beta</th>
-      <td>1.024</td>
-      <td>0.021</td>
-      <td>0.982</td>
-      <td>1.061</td>
+      <td>1.040</td>
+      <td>0.022</td>
+      <td>0.999</td>
+      <td>1.081</td>
       <td>0.000</td>
       <td>0.000</td>
-      <td>2052.0</td>
-      <td>2730.0</td>
-      <td>1.00</td>
+      <td>2024.0</td>
+      <td>2551.0</td>
+      <td>1.0</td>
     </tr>
     <tr>
       <th>y_new[0]</th>
-      <td>0.935</td>
-      <td>0.090</td>
-      <td>0.772</td>
-      <td>1.105</td>
-      <td>0.001</td>
-      <td>0.002</td>
-      <td>7886.0</td>
-      <td>2418.0</td>
-      <td>1.00</td>
+      <td>-1.032</td>
+      <td>0.779</td>
+      <td>-2.507</td>
+      <td>0.429</td>
+      <td>0.009</td>
+      <td>0.017</td>
+      <td>7210.0</td>
+      <td>2238.0</td>
+      <td>1.0</td>
     </tr>
     <tr>
       <th>y_new[1]</th>
-      <td>-0.136</td>
-      <td>0.279</td>
-      <td>-0.678</td>
-      <td>0.376</td>
-      <td>0.004</td>
-      <td>0.005</td>
-      <td>6027.0</td>
-      <td>2596.0</td>
-      <td>1.00</td>
+      <td>1.471</td>
+      <td>3.992</td>
+      <td>-6.525</td>
+      <td>8.502</td>
+      <td>0.054</td>
+      <td>0.075</td>
+      <td>5550.0</td>
+      <td>2449.0</td>
+      <td>1.0</td>
     </tr>
     <tr>
       <th>y_new[2]</th>
-      <td>-0.694</td>
-      <td>3.605</td>
-      <td>-7.794</td>
-      <td>5.785</td>
-      <td>0.046</td>
-      <td>0.061</td>
-      <td>6095.0</td>
-      <td>2780.0</td>
-      <td>1.00</td>
+      <td>0.745</td>
+      <td>1.191</td>
+      <td>-1.491</td>
+      <td>2.926</td>
+      <td>0.014</td>
+      <td>0.023</td>
+      <td>6715.0</td>
+      <td>2684.0</td>
+      <td>1.0</td>
     </tr>
     <tr>
       <th>...</th>
@@ -360,63 +353,63 @@ az.summary(idata)
     </tr>
     <tr>
       <th>y_new[995]</th>
-      <td>1.833</td>
-      <td>0.582</td>
-      <td>0.743</td>
-      <td>2.929</td>
-      <td>0.007</td>
-      <td>0.010</td>
-      <td>6696.0</td>
-      <td>3027.0</td>
-      <td>1.00</td>
+      <td>-0.267</td>
+      <td>4.241</td>
+      <td>-8.883</td>
+      <td>7.035</td>
+      <td>0.050</td>
+      <td>0.078</td>
+      <td>7365.0</td>
+      <td>2624.0</td>
+      <td>1.0</td>
     </tr>
     <tr>
       <th>y_new[996]</th>
-      <td>0.597</td>
-      <td>0.477</td>
-      <td>-0.272</td>
-      <td>1.523</td>
-      <td>0.006</td>
-      <td>0.009</td>
-      <td>6358.0</td>
-      <td>2796.0</td>
-      <td>1.00</td>
+      <td>-0.266</td>
+      <td>0.417</td>
+      <td>-1.037</td>
+      <td>0.542</td>
+      <td>0.005</td>
+      <td>0.008</td>
+      <td>6827.0</td>
+      <td>2843.0</td>
+      <td>1.0</td>
     </tr>
     <tr>
       <th>y_new[997]</th>
-      <td>0.744</td>
-      <td>0.933</td>
-      <td>-1.008</td>
-      <td>2.435</td>
-      <td>0.011</td>
-      <td>0.020</td>
-      <td>6666.0</td>
-      <td>2281.0</td>
-      <td>1.00</td>
+      <td>0.870</td>
+      <td>1.703</td>
+      <td>-2.267</td>
+      <td>4.081</td>
+      <td>0.022</td>
+      <td>0.032</td>
+      <td>5869.0</td>
+      <td>2641.0</td>
+      <td>1.0</td>
     </tr>
     <tr>
       <th>y_new[998]</th>
-      <td>-0.536</td>
-      <td>0.186</td>
-      <td>-0.900</td>
-      <td>-0.190</td>
-      <td>0.002</td>
-      <td>0.004</td>
-      <td>8162.0</td>
-      <td>2644.0</td>
-      <td>1.00</td>
+      <td>-0.146</td>
+      <td>0.469</td>
+      <td>-1.035</td>
+      <td>0.744</td>
+      <td>0.005</td>
+      <td>0.009</td>
+      <td>7718.0</td>
+      <td>2656.0</td>
+      <td>1.0</td>
     </tr>
     <tr>
       <th>y_new[999]</th>
-      <td>1.250</td>
-      <td>0.261</td>
-      <td>0.743</td>
-      <td>1.726</td>
-      <td>0.003</td>
-      <td>0.005</td>
-      <td>6624.0</td>
-      <td>2364.0</td>
-      <td>1.00</td>
+      <td>1.531</td>
+      <td>3.859</td>
+      <td>-5.422</td>
+      <td>8.944</td>
+      <td>0.047</td>
+      <td>0.075</td>
+      <td>6827.0</td>
+      <td>2565.0</td>
+      <td>1.0</td>
     </tr>
   </tbody>
 </table>
@@ -586,7 +579,7 @@ Before modeling, lets analyze the data so we have a better understanding of what
 plot_mse_by_x(model_data, 'days_out', 'precip_pred', 'precip_obs')
 ```
 
-    4.366771
+    Overall RMSE: 4.366771
     
 
 
@@ -700,16 +693,6 @@ with weather_model:
     idata = pm.sample()
 ```
 
-    c:\Users\mason\miniforge3\envs\pymc_env\Lib\site-packages\threadpoolctl.py:1226: RuntimeWarning: 
-    Found Intel OpenMP ('libiomp') and LLVM OpenMP ('libomp') loaded at
-    the same time. Both libraries are known to be incompatible and this
-    can cause random crashes or deadlocks on Linux when loaded in the
-    same Python program.
-    Using threadpoolctl may cause crashes or deadlocks. For more
-    information and possible workarounds, please see
-        https://github.com/joblib/threadpoolctl/blob/master/multiple_openmp.md
-    
-      warnings.warn(msg, RuntimeWarning)
     Initializing NUTS using jitter+adapt_diag...
     Multiprocess sampling (4 chains in 4 jobs)
     NUTS: [intercept, beta, y_new]
@@ -724,7 +707,7 @@ with weather_model:
 
 
 
-    Sampling 4 chains for 1_000 tune and 1_000 draw iterations (4_000 + 4_000 draws total) took 131 seconds.
+    Sampling 4 chains for 1_000 tune and 1_000 draw iterations (4_000 + 4_000 draws total) took 60 seconds.
     The rhat statistic is larger than 1.01 for some parameters. This indicates problems during sampling. See https://arxiv.org/abs/1903.08008 for details
     
 
@@ -781,25 +764,25 @@ az.summary(idata, var_names=['intercept','beta'])
       <th>intercept</th>
       <td>1.200</td>
       <td>0.018</td>
-      <td>1.167</td>
-      <td>1.235</td>
+      <td>1.166</td>
+      <td>1.232</td>
       <td>0.0</td>
       <td>0.0</td>
-      <td>1678.0</td>
-      <td>2541.0</td>
-      <td>1.0</td>
+      <td>1938.0</td>
+      <td>2670.0</td>
+      <td>1.01</td>
     </tr>
     <tr>
       <th>beta</th>
       <td>0.071</td>
       <td>0.004</td>
-      <td>0.062</td>
-      <td>0.078</td>
+      <td>0.063</td>
+      <td>0.079</td>
       <td>0.0</td>
       <td>0.0</td>
-      <td>1755.0</td>
-      <td>2910.0</td>
-      <td>1.0</td>
+      <td>1953.0</td>
+      <td>2529.0</td>
+      <td>1.00</td>
     </tr>
   </tbody>
 </table>
