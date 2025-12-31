@@ -13,16 +13,22 @@
 # you will see them accessed via {{ site.title }}, {{ site.email }}, and so on.
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
-title: MM
-email:
+title: MY
+email: yahr.mason@gmail.com
 description: >- # this means to ignore newlines until "baseurl:"
-  Write an awesome description for your new site here. You can edit this
-  line in _config.yml. It will appear in your document head meta (for
-  Google search results) and in your feed.xml site description.
-twitter_username: username
-github_username: username
-minimal_mistakes_skin: default
+  Applied statistician and data scientist.
+  Interested in and Bayesian Modeling and Optimization.
+twitter_username: yahrMason
+github_username: yahrMason
+minimal_mistakes_skin: air
 search: true
+# google_analytics: G-CQ1TYL4K9J
+
+analytics:
+  provider: "google-gtag"
+  google:
+    tracking_id: "G-CQ1TYL4K9J"
+    anonymize_ip: false # default
 
 # Build settings
 markdown: kramdown
@@ -58,34 +64,39 @@ plugins:
   - jekyll-include-cache
 
 author:
-  name   : "First Lastname"
-  avatar : "/assets/images/bio-photo.jpg"
-  bio    : "My awesome biography constrained to a sentence or two goes here."
-  links:
-    - label: "Website"
-      icon: "fas fa-fw fa-link"
-      url: "https://"
-    - label: "Twitter"
-      icon: "fab fa-fw fa-twitter-square"
-      url: "https://twitter.com/"
-    - label: "GitHub"
-      icon: "fab fa-fw fa-github"
-      url: "https://github.com/"
-    - label: "Instagram"
-      icon: "fab fa-fw fa-instagram"
-      url: "https://instagram.com/"
+  name     : "Mason Yahr"
+  avatar   : "/assets/images/headshot.jpg"
+  bio      : "Applied statistician and data scientist. Interested in and Bayesian Modeling and Optimization."
+  location : "Milwaukee, WI"
+  email    : "yahr.mason@gmail.com"
+  twitter  : "yahrMason" 
+  github   : "yahrMason"
+  linkedin : "mason-yahr-78974098"
+  # links:
+  #   - label: "Twitter"
+  #     icon: "fab fa-fw fa-twitter-square"
+  #     url: "https://twitter.com/yahrMason"
+  #   - label: "GitHub"
+  #     icon: "fab fa-fw fa-github"
+  #     url: "https://github.com/yahrMason"
+  #   - label: "LinkedIn"
+  #     icon: "fab fa-fw fa-linkedin"
+  #     url: "https://www.linkedin.com/in/mason-yahr-78974098/"
+
+head_scripts:
+  - https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML
 
 footer:
   links:
     - label: "Twitter"
       icon: "fab fa-fw fa-twitter-square"
-      url: "https://twitter.com/"
+      url: "https://twitter.com/yahrMason"
     - label: "GitHub"
       icon: "fab fa-fw fa-github"
-      url: "https://github.com/"
-    - label: "Instagram"
-      icon: "fab fa-fw fa-instagram"
-      url: "https://instagram.com/"
+      url: "https://github.com/yahrMason"
+    - label: "LinkedIn"
+      icon: "fab fa-fw fa-linkedin"
+      url: "https://www.linkedin.com/in/mason-yahr-78974098/"
 
 defaults:
   # _posts
