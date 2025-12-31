@@ -174,7 +174,7 @@ This struct has a lot of nice methods such as being able to pass in `x` values a
 
 ```julia
 # Fit model with basic OLS
-β_spline = coef(lm(X,y));
+β_spline = X \ y;
 # Define Spline Object
 Spline_OLS = Spline(Basis, β_spline);
 ```
@@ -267,7 +267,7 @@ end
 Xp, yp = PenaltyMatrix(Basis, λ, x, y);
 
 # Fit Penalized Spline
-β_penalized = coef(lm(Xp,yp));
+β_penalized = Xp \ yp;
 # Define Penalized Spline Object
 Spline_penalized = Spline(Basis, β_penalized);
 
@@ -288,16 +288,27 @@ I was able to adapt Wood's R code from his text to Julia. The code for these fun
 ```julia
 # Function to calculate GCV for given penalty
 function GCV(param::AbstractVector, Basis::BSplineBasis{Vector{Float64}}, x::AbstractVector, y::AbstractVector)
-    n = length(Basis.breakpoints)
+    n = length(y)
     Xp, yp = PenaltyMatrix(Basis, param[1], x, y)
-    β = coef(lm(Xp,yp))
-    H = Xp*inv(Xp'Xp)Xp' # hat matrix
-    trF = sum(diag(H)[1:n])
-    y_hat = Xp*β
-    rss = sum((yp-y_hat)[1:n].^2) ## residual SS
-    gcv = n*rss/(n-trF)^2
+    β = Xp \ yp # Coef
+    H = Xp * ((Xp'Xp) \ Xp') # hat matrix
+    trF = sum(diag(H)[1:n]) # EDF
+    y_hat = Xp * β # predictions
+    rsd = y - y_hat[1:n] # residuals
+    rss = sum(rsd.^2) # residual SS
+    sig_hat = rss/(n-trF) # residual variance
+    gcv = sig_hat*n/(n-trF) # GCV score
     return gcv
 end
+
+rho = range(-9, 11, length = 90)
+out = []
+for i in 1:90
+    push!(out, GCV([exp(rho[i])], Basis, x, y))
+end
+plot(rho, out)
+
+rho[argmin(out)]
 
 # Function that Optimized Lambda based on GCV
 function OptimizeGCVLambda(Basis::BSplineBasis{Vector{Float64}}, x::AbstractVector, y::AbstractVector)
@@ -326,7 +337,7 @@ Now that we have obtained an optimal value for lambda, we can build the penalize
 Xp_opt, yp_opt = PenaltyMatrix(Basis, λ_opt, x, y);
 
 # Fit Optimized Spline
-β_opt = coef(lm(Xp_opt,yp_opt));
+β_opt = Xp_opt \ yp_opt;
 # Define Optimized Spline Object
 Spline_opt = Spline(Basis, β_opt);
 
@@ -421,7 +432,7 @@ One thing to note: Since we are fitting the y-intercept variable `α` in this mo
 ```julia
 # Define Model Function
 ## Note adding y_mean back to y
-spline_mod = SmoothSplineModel(X_fe, Z_re, y .+ y_mean, 100, 10, 5, 5);
+spline_mod = SmoothSplineModel(X_fe, Z_re, y, 0, 10, 10, 10);
 
 # MCMC Sampling
 chain_smooth = sample(spline_mod, NUTS(), 1_000);
@@ -446,7 +457,7 @@ The following plot compares the original spline model to the smoothing spline mo
 # Plot Data and Splines
 PlotCherryData(alpha=0.2)
 plot!(x, Spline_opt.(x) .+ y_mean, color = :blue, linewidth = 3, label = "Spline: λ = $(round(λ_opt,digits=3))")
-plot!(x, mean(pred_smooth;dims=2), color = :green, linewidth = 3, label = "Spline: Bayes")
+plot!(x, mean(pred_smooth;dims=2) .+ y_mean, color = :green, linewidth = 3, label = "Spline: Bayes")
 ```
 
 Since our outcomes are so similar, what are we getting using the Bayesian model over optimizing the λ penalty? 
@@ -482,8 +493,9 @@ end
 
 # Plot the HDI
 PartialDepPlot(x, pred_smooth)
+plot!(x, Spline_opt.(x), color = :blue, linewidth = 3, label = "Spline: λ = $(round(λ_opt,digits=3))")
 scatter!(
-    x, y .+ y_mean,
+    x, y,
     color=:blue,
     xlabel="Year",
     ylabel="Day of First Blossom",
