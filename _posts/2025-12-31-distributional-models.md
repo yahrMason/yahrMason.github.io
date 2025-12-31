@@ -109,7 +109,7 @@ plot_residual_by_x(df, 'x', 'y_pred', 'y')
 
 
     
-![png](2025-12-31-distributional-models_files/2025-12-31-distributional-models_8_1.png)
+![png](/assets/2025-12-31-distributional-models_files/2025-12-31-distributional-models_8_1.png)
     
 
 
@@ -171,7 +171,7 @@ plot_mse_by_x(df, 'x', 'y_pred', 'y')
 
 
     
-![png](2025-12-31-distributional-models_files/2025-12-31-distributional-models_11_1.png)
+![png](/assets/2025-12-31-distributional-models_files/2025-12-31-distributional-models_11_1.png)
     
 
 
@@ -591,7 +591,7 @@ plot_mse_by_x(model_data, 'days_out', 'precip_pred', 'precip_obs')
 
 
     
-![png](2025-12-31-distributional-models_files/2025-12-31-distributional-models_19_1.png)
+![png](/assets/2025-12-31-distributional-models_files/2025-12-31-distributional-models_19_1.png)
     
 
 
@@ -623,7 +623,7 @@ plt.show()
 
 
     
-![png](2025-12-31-distributional-models_files/2025-12-31-distributional-models_21_0.png)
+![png](/assets/2025-12-31-distributional-models_files/2025-12-31-distributional-models_21_0.png)
     
 
 
@@ -735,7 +735,7 @@ az.plot_trace(idata, var_names=['intercept','beta']);
 
 
     
-![png](2025-12-31-distributional-models_files/2025-12-31-distributional-models_27_0.png)
+![png](/assets/2025-12-31-distributional-models_files/2025-12-31-distributional-models_27_0.png)
     
 
 
@@ -873,7 +873,7 @@ plt.tight_layout()
 
 
     
-![png](2025-12-31-distributional-models_files/2025-12-31-distributional-models_30_0.png)
+![png](/assets/2025-12-31-distributional-models_files/2025-12-31-distributional-models_30_0.png)
     
 
 
