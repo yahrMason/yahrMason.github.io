@@ -1,0 +1,15 @@
+---
+# only the first two dashes are stripped
+---
+
+@import "minimal-mistakes/skins/{{ site.minimal_mistakes_skin | default: 'default' }}";
+@import "minimal-mistakes";
+
+/* Increase max-width for wider content while respecting sidebar */
+.page {
+  max-width: 900px !important;
+}
+
+.archive {
+  max-width: 900px !important;
+}
