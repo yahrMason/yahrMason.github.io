@@ -347,14 +347,16 @@ I was able to adapt Wood's R code from his text to Julia. The code for these fun
 {% highlight julia %}
 # Function to calculate GCV for given penalty
 function GCV(param::AbstractVector, Basis::BSplineBasis{Vector{Float64}}, x::AbstractVector, y::AbstractVector)
-    n = length(Basis.breakpoints)
+    n = length(y)
     Xp, yp = PenaltyMatrix(Basis, param[1], x, y)
-    β = coef(lm(Xp,yp))
+    β = coef(lm(Xp,yp)) # Coef
     H = Xp*inv(Xp'Xp)Xp' # hat matrix
-    trF = sum(diag(H)[1:n])
-    y_hat = Xp*β
-    rss = sum((yp-y_hat)[1:n].^2) ## residual SS
-    gcv = n*rss/(n-trF)^2
+    trF = sum(diag(H)[1:n]) # EDF
+    y_hat = Xp*β # predictions
+    rsd = y - y_hat[1:n] # residuals
+    rss = sum(rsd.^2) # residual SS
+    sig_hat = rss/(n-trF) # residual variance
+    gcv = sig_hat*n/(n-trF) # GCV score
     return gcv
 end
 
