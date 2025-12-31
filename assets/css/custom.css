@@ -1,0 +1,45 @@
+/* Widen the main content area */
+.page {
+  max-width: 100%;
+  width: 100%;
+}
+
+.archive {
+  max-width: 100%;
+  width: 100%;
+}
+
+.sidebar {
+  flex: 0 0 200px;
+}
+
+/* Adjust the main content wrapper */
+.masthead {
+  max-width: 100%;
+}
+
+.initial-content {
+  max-width: 100%;
+}
+
+/* Widen the single post layout */
+.layout--single {
+  max-width: 100%;
+}
+
+/* Adjust grid for wider content */
+@supports (display: grid) {
+  body {
+    display: grid;
+    grid-template-columns: [full-start] 1fr [main-start] minmax(0, 900px) [main-end] 1fr [full-end];
+    grid-template-rows: auto auto auto;
+  }
+  
+  .archive,
+  .page,
+  .splash {
+    grid-column: main-start / main-end;
+    width: 100%;
+    max-width: 100%;
+  }
+}
