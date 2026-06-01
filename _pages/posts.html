@@ -1,0 +1,73 @@
+---
+layout: null
+permalink: /posts/
+title: "Writing"
+analytics: true
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Writing | Mason Yahr</title>
+    <meta name="description" content="Technical writing by Mason Yahr on Bayesian modeling, Julia, simulation, uncertainty, and applied statistics.">
+    <link rel="canonical" href="{{ '/posts/' | absolute_url }}">
+    <link rel="stylesheet" href="{{ '/assets/css/home-redesign.css' | relative_url }}">
+    {% include analytics.html %}
+  </head>
+  <body class="home-redesign posts-page">
+    <main>
+      <section class="posts-hero" aria-labelledby="posts-title">
+        <nav class="site-nav" aria-label="Primary">
+          <a href="{{ '/' | relative_url }}">Mason Yahr</a>
+          <a href="{{ '/' | relative_url }}#story">Story</a>
+          <a href="{{ '/about/' | relative_url }}">About</a>
+          <a href="{{ '/posts/' | relative_url }}">Posts</a>
+          <a href="mailto:yahr.mason@gmail.com">Contact</a>
+        </nav>
+
+        <div class="posts-intro">
+          <p class="eyebrow">Writing</p>
+          <h1 id="posts-title">Technical notes, modeling experiments, and things I wanted to understand better.</h1>
+        </div>
+      </section>
+
+      <section class="posts-list" aria-label="All posts">
+        {% for post in site.posts %}
+          <article class="post-row">
+            <a href="{{ post.url | relative_url }}">
+              {% assign category = post.categories | first %}
+              <div class="post-meta">
+                <time datetime="{{ post.date | date_to_xmlschema }}">{{ post.date | date: "%Y" }}</time>
+                {% if category and category != "" %}
+                  <span>{{ category }}</span>
+                {% endif %}
+              </div>
+              <div class="post-summary">
+                <h2>{{ post.title }}</h2>
+                {% if post.excerpt %}
+                  <p>{{ post.excerpt | strip_html | normalize_whitespace | truncate: 160 }}</p>
+                {% endif %}
+                {% if post.tags and post.tags.size > 0 %}
+                  <div class="post-tags" aria-label="Tags">
+                    {% for tag in post.tags limit: 4 %}
+                      <span>{{ tag }}</span>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            </a>
+          </article>
+        {% endfor %}
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>Mason Yahr</span>
+      <a href="{{ '/' | relative_url }}">Home</a>
+      <a href="{{ '/about/' | relative_url }}">About</a>
+      <a href="https://www.linkedin.com/in/mason-yahr-78974098/">LinkedIn</a>
+      <a href="mailto:yahr.mason@gmail.com">yahr.mason@gmail.com</a>
+    </footer>
+  </body>
+</html>

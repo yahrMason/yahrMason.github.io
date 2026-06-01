@@ -1,0 +1,103 @@
+---
+layout: null
+permalink: /about/
+title: "About"
+analytics: true
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>About | Mason Yahr</title>
+    <meta name="description" content="About Mason Yahr, an applied statistician and senior data scientist working across sports modeling, uncertainty, and risk quantification.">
+    <link rel="canonical" href="{{ '/about/' | absolute_url }}">
+    <link rel="stylesheet" href="{{ '/assets/css/home-redesign.css' | relative_url }}">
+    {% include analytics.html %}
+  </head>
+  <body class="home-redesign about-page">
+    <main>
+      <section class="about-hero" aria-labelledby="about-title">
+        <nav class="site-nav" aria-label="Primary">
+          <a href="{{ '/' | relative_url }}">Mason Yahr</a>
+          <a href="{{ '/' | relative_url }}#story">Story</a>
+          <a href="{{ '/' | relative_url }}#writing">Writing</a>
+          <a href="{{ '/posts/' | relative_url }}">Posts</a>
+          <a href="mailto:yahr.mason@gmail.com">Contact</a>
+        </nav>
+
+        <div class="about-intro">
+          <p class="eyebrow">About</p>
+          <h1 id="about-title">From actuarial science to sports modeling, with a few detours along the way.</h1>
+        </div>
+      </section>
+
+      <section class="about-body" aria-label="Biography">
+        <div class="about-main">
+          <p>
+            I'm a data scientist and statistician specializing in risk quantification
+            and probability assessment. I currently work for FanDuel as a senior data
+            scientist on the Sports Modeling and Innovation team.
+          </p>
+          <p>
+            My educational background is in actuarial science and applied statistics,
+            and my work has crossed insurance, professional sports, consumer packaged
+            goods, and betting. The common thread is modeling uncertainty clearly
+            enough that it can support real decisions.
+          </p>
+          <p>
+            I write here about things I am trying to understand more deeply. The posts
+            are usually technical, sometimes narrow, and often written because working
+            through the idea in public helps sharpen it.
+          </p>
+          <p>
+            Beyond work, I am a husband and father who enjoys going for walks with my
+            family, cooking, and mowing the lawn.
+          </p>
+        </div>
+
+        <aside class="about-card" aria-label="Profile details">
+          <img src="{{ '/assets/images/headshot.jpg' | relative_url }}" alt="Mason Yahr">
+          <div>
+            <span>Based in</span>
+            Milwaukee, WI
+          </div>
+          <div>
+            <span>Current</span>
+            Senior Data Scientist, FanDuel
+          </div>
+          <div>
+            <span>Focus</span>
+            Sport, uncertainty, risk quantification
+          </div>
+        </aside>
+      </section>
+
+      <section class="about-grid" aria-label="Background">
+        <article>
+          <span>Experience</span>
+          <h2>Sports, consumer goods, insurance, and betting</h2>
+          <p>Applied data science across domains where uncertainty and decision-making matter.</p>
+        </article>
+        <article>
+          <span>Training</span>
+          <h2>Actuarial science and applied statistics</h2>
+          <p>A statistical foundation shaped by probability, risk, and real-world constraints.</p>
+        </article>
+        <article>
+          <span>Writing</span>
+          <h2>Technical notes and experiments</h2>
+          <p>Bayesian models, Julia experiments, simulation, and tools for understanding uncertainty.</p>
+        </article>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>Mason Yahr</span>
+      <a href="{{ '/' | relative_url }}">Home</a>
+      <a href="{{ '/posts/' | relative_url }}">All posts</a>
+      <a href="https://www.linkedin.com/in/mason-yahr-78974098/">LinkedIn</a>
+      <a href="mailto:yahr.mason@gmail.com">yahr.mason@gmail.com</a>
+    </footer>
+  </body>
+</html>
