@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ page.title }} | Mason Yahr</title>
+    {% if page.excerpt %}
+      <meta name="description" content="{{ page.excerpt | strip_html | normalize_whitespace }}">
+    {% else %}
+      <meta name="description" content="{{ site.description | strip_html | normalize_whitespace }}">
+    {% endif %}
+    <link rel="canonical" href="{{ page.url | absolute_url }}">
+    <link rel="stylesheet" href="{{ '/assets/css/home-redesign.css' | relative_url }}">
+    {% include analytics.html %}
+  </head>
+  <body class="home-redesign article-page">
+    <main>
+      <article class="article-shell">
+        <nav class="site-nav" aria-label="Primary">
+          <a href="{{ '/' | relative_url }}">Mason Yahr</a>
+          <a href="{{ '/' | relative_url }}#story">Story</a>
+          <a href="{{ '/posts/' | relative_url }}">Posts</a>
+          <a href="{{ '/about/' | relative_url }}">About</a>
+          <a href="mailto:yahr.mason@gmail.com">Contact</a>
+        </nav>
+
+        <header class="article-header">
+          <div class="article-meta">
+            <time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%B %-d, %Y" }}</time>
+            {% assign category = page.categories | first %}
+            {% if category and category != "" %}
+              <span>{{ category }}</span>
+            {% endif %}
+          </div>
+          <h1>{{ page.title }}</h1>
+          {% if page.excerpt %}
+            <p>{{ page.excerpt | strip_html | normalize_whitespace }}</p>
+          {% endif %}
+          {% if page.tags and page.tags.size > 0 %}
+            <div class="post-tags" aria-label="Tags">
+              {% for tag in page.tags %}
+                <span>{{ tag }}</span>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </header>
+
+        <div class="article-content">
+          {{ content }}
+        </div>
+
+        <footer class="article-footer">
+          <a href="{{ '/posts/' | relative_url }}">All writing</a>
+          <a href="{{ '/' | relative_url }}">Home</a>
+        </footer>
+      </article>
+    </main>
+
+    <footer class="site-footer">
+      <span>Mason Yahr</span>
+      <a href="{{ '/' | relative_url }}">Home</a>
+      <a href="{{ '/posts/' | relative_url }}">All posts</a>
+      <a href="{{ '/about/' | relative_url }}">About</a>
+      <a href="https://www.linkedin.com/in/mason-yahr-78974098/">LinkedIn</a>
+      <a href="mailto:yahr.mason@gmail.com">yahr.mason@gmail.com</a>
+    </footer>
+  </body>
+</html>

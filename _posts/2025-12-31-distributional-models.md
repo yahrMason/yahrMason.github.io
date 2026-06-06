@@ -1,3 +1,15 @@
+---
+layout: posts
+title: "Distributional Models"
+date: 2025-12-31
+categories: ""
+tags:
+  - python
+  - bayes
+  - modeling
+excerpt: "Modeling uncertainty beyond the mean with distributional models."
+---
+
 Since having twins a few years ago, my free time has been unsurprisingly limited. The time I get to spend with my young children is precious, but I’ve struggled to be intentional about carving out space for my own interests. This past year I only read one book (not counting audio), Allen Downey’s Probably Overthinking It. I’m a big fan.
 
 In the new year, I’m setting a small goal: write one blog post each quarter and read at least one more book than this year. Not particularly lofty in the grand scheme of things, but this post is my attempt to get the ball rolling.
