@@ -448,6 +448,16 @@ X_fe, Z_re = MixedEffectMatrix(Basis, x);
 
 
 
+The transformed random-effect coefficients are the second differences of the original spline coefficients: `b = D * β`. Giving them a common zero-mean Normal prior shrinks these differences toward zero. We learn the shared standard deviation `σ_b` from the data, so this is still a hierarchical model: smaller values imply stronger smoothing. Estimating an additional mean for `b` would instead shrink the differences toward a potentially nonzero value.
+
+Conditional on the scales, the likelihood and random-effect prior contribute the objective
+
+$$
+\lVert y - X_{fe} B - Z_{re} b - \alpha \rVert^2 + \frac{\sigma^2}{\sigma_b^2} \lVert b \rVert^2.
+$$
+
+Thus the corresponding smoothing parameter is `λ = σ² / σ_b²`. The proper priors on the fixed effects and intercept provide additional regularization.
+
 We can now define our Turing model to fit the hierarchical smoothing spline model. This model function accepts the following arguments:
 
   - `X_fe` is the fixed effect matrix;
@@ -455,8 +465,8 @@ We can now define our Turing model to fit the hierarchical smoothing spline mode
   - `y` is the element we want to predict;
   - `μ_int` is the center of the intercept prior;
   - `σ_prior` is the standard deviation of coefficient priors;
-  - `err_prior` defines the exponential prior on likelihood error;
-  - `re_prior` defines the exponential prior on random effect variance.
+  - `err_prior` is the scale (and mean) of the exponential prior on residual standard deviation `σ`;
+  - `re_prior` is the scale (and mean) of the exponential prior on random-effect standard deviation `σ_b`.
 
 {% highlight julia %}
 # Define Turing model
@@ -470,9 +480,8 @@ We can now define our Turing model to fit the hierarchical smoothing spline mode
     B ~ MvNormal(repeat([0],2), σ_prior)
     
     # Random Effects
-    μ_b ~ Normal(0, σ_prior)
     σ_b ~ Exponential(re_prior)
-    b ~ filldist(Normal(μ_b, σ_b), size(Z_re)[2])
+    b ~ filldist(Normal(0, σ_b), size(Z_re)[2])
     
     # error
     σ ~ Exponential(err_prior)
@@ -506,56 +515,6 @@ summarystats(chain_smooth)
 {% endhighlight %}
 
 
-Summary Statistics
-  parameters       mean       std   naive_se      mcse        ess      rhat
-    ⋯
-      Symbol    Float64   Float64    Float64   Float64    Float64   Float64
-    ⋯
-
-           α   100.9578    5.6333     0.1781    0.2900   371.9183    0.9990
-    ⋯
-        B[1]    -1.1778    5.6998     0.1802    0.2881   356.6087    0.9991
-    ⋯
-        B[2]     1.2111    5.5418     0.1752    0.2848   369.8150    0.9990
-    ⋯
-         μ_b    -0.3800    0.6335     0.0200    0.0211   702.2543    0.9991
-    ⋯
-         σ_b     2.2553    1.1081     0.0350    0.1023    76.1735    1.0261
-    ⋯
-        b[1]    -0.1599    2.1407     0.0677    0.0843   507.3550    0.9996
-    ⋯
-        b[2]    -0.8512    1.8899     0.0598    0.0674   527.4515    1.0007
-    ⋯
-        b[3]    -2.0182    1.6583     0.0524    0.0862   336.3577    0.9990
-    ⋯
-        b[4]    -0.5716    1.5628     0.0494    0.0594   800.0749    0.9997
-    ⋯
-        b[5]     0.7625    1.6226     0.0513    0.0569   890.2162    1.0007
-    ⋯
-        b[6]     2.7054    2.2498     0.0711    0.1585   135.8350    1.0154
-    ⋯
-        b[7]    -2.3017    2.4691     0.0781    0.1916   117.8017    1.0097
-    ⋯
-        b[8]     0.3076    1.7181     0.0543    0.0777   375.2523    0.9993
-    ⋯
-        b[9]     0.1552    1.6209     0.0513    0.0622   605.8256    1.0024
-    ⋯
-       b[10]    -0.7186    1.6908     0.0535    0.0960   281.5948    1.0052
-    ⋯
-       b[11]     0.7085    1.8439     0.0583    0.1153   205.5236    1.0069
-    ⋯
-       b[12]    -1.8647    1.7745     0.0561    0.0797   554.2207    1.0004
-    ⋯
-      ⋮           ⋮          ⋮         ⋮          ⋮         ⋮          ⋮   
-    ⋱
-                                                     1 column and 4 rows om
-itted
-
-
-
-
-
-
 We can then take the mean of the posterior for each parameter and build the spline predictions for each observation to compare with our previous models.
 
 {% highlight julia %}
@@ -578,7 +537,7 @@ plot!(x, Spline_opt.(x) .+ y_mean, color = :blue, linewidth = 3, label = "Spline
 plot!(x, mean(pred_smooth;dims=2), color = :green, linewidth = 3, label = "Spline: Bayes")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_18_1.png) 
+
 
 
 
@@ -626,7 +585,7 @@ scatter!(
 )
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_19_1.png) 
+
 
 
 
@@ -702,13 +661,11 @@ I am certain there is a more elegant "Julian" way to build this, but for now the
     
     # Random Effects
     ## Variable 1
-    μ_b1 ~ Normal(0, σ_prior)
     σ_b1 ~ Exponential(re_prior)
-    b1 ~ filldist(Normal(μ_b1, σ_b1), size(Z_re[1])[2])
+    b1 ~ filldist(Normal(0, σ_b1), size(Z_re[1])[2])
     ## Variable 2
-    μ_b2 ~ Normal(0, σ_prior)
     σ_b2 ~ Exponential(re_prior)
-    b2 ~ filldist(Normal(μ_b2, σ_b2), size(Z_re[2])[2])
+    b2 ~ filldist(Normal(0, σ_b2), size(Z_re[2])[2])
     
     # error
     σ ~ Exponential(err_prior)
@@ -759,7 +716,7 @@ plot(GirthPlot, HeightPlot, plot_title = "Partial Dependence Plots")
 ylabel!("Tree Volume")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_24_1.png) 
+
 
 
 
@@ -781,7 +738,7 @@ xlabel!("Tree Volume");
 ylabel!("Predicted Volume")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_25_1.png) 
+
 
 
 

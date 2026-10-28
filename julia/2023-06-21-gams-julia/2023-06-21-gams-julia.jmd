@@ -387,6 +387,16 @@ end
 X_fe, Z_re = MixedEffectMatrix(Basis, x);
 ```
 
+The transformed random-effect coefficients are the second differences of the original spline coefficients: `b = D * β`. Giving them a common zero-mean Normal prior shrinks these differences toward zero. We learn the shared standard deviation `σ_b` from the data, so this is still a hierarchical model: smaller values imply stronger smoothing. Estimating an additional mean for `b` would instead shrink the differences toward a potentially nonzero value.
+
+Conditional on the scales, the likelihood and random-effect prior contribute the objective
+
+$$
+\lVert y - X_{fe} B - Z_{re} b - \alpha \rVert^2 + \frac{\sigma^2}{\sigma_b^2} \lVert b \rVert^2.
+$$
+
+Thus the corresponding smoothing parameter is `λ = σ² / σ_b²`. The proper priors on the fixed effects and intercept provide additional regularization.
+
 We can now define our Turing model to fit the hierarchical smoothing spline model. This model function accepts the following arguments:
 
   - `X_fe` is the fixed effect matrix;
@@ -394,8 +404,8 @@ We can now define our Turing model to fit the hierarchical smoothing spline mode
   - `y` is the element we want to predict;
   - `μ_int` is the center of the intercept prior;
   - `σ_prior` is the standard deviation of coefficient priors;
-  - `err_prior` defines the exponential prior on likelihood error;
-  - `re_prior` defines the exponential prior on random effect variance.
+  - `err_prior` is the scale (and mean) of the exponential prior on residual standard deviation `σ`;
+  - `re_prior` is the scale (and mean) of the exponential prior on random-effect standard deviation `σ_b`.
 
 ```julia
 # Define Turing model
@@ -409,9 +419,8 @@ We can now define our Turing model to fit the hierarchical smoothing spline mode
     B ~ MvNormal(repeat([0],2), σ_prior)
     
     # Random Effects
-    μ_b ~ Normal(0, σ_prior)
     σ_b ~ Exponential(re_prior)
-    b ~ filldist(Normal(μ_b, σ_b), size(Z_re)[2])
+    b ~ filldist(Normal(0, σ_b), size(Z_re)[2])
     
     # error
     σ ~ Exponential(err_prior)
@@ -567,13 +576,11 @@ I am certain there is a more elegant "Julian" way to build this, but for now the
     
     # Random Effects
     ## Variable 1
-    μ_b1 ~ Normal(0, σ_prior)
     σ_b1 ~ Exponential(re_prior)
-    b1 ~ filldist(Normal(μ_b1, σ_b1), size(Z_re[1])[2])
+    b1 ~ filldist(Normal(0, σ_b1), size(Z_re[1])[2])
     ## Variable 2
-    μ_b2 ~ Normal(0, σ_prior)
     σ_b2 ~ Exponential(re_prior)
-    b2 ~ filldist(Normal(μ_b2, σ_b2), size(Z_re[2])[2])
+    b2 ~ filldist(Normal(0, σ_b2), size(Z_re[2])[2])
     
     # error
     σ ~ Exponential(err_prior)
