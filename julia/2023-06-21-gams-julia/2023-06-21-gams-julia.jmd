@@ -18,7 +18,7 @@ As a data scientist looking to learn more about Julia, I thought it would be a w
 GAMs are tools that allow us to model an outcome variable as the sum of different functions over the input variables.
 Typically, these functions are smooth function approximations called called splines, but this is not necessary for GAMs.
 A common approach to building splines is to use [basis functions](https://en.wikipedia.org/wiki/Basis_function#:~:text=In%20mathematics%2C%20a%20basis%20function,linear%20combination%20of%20basis%20vectors.), which allow us to build arbitrarily "wiggly" curves to fit the data.
-Smoothing splines help avoid over-fitting by regularizing the "wiggliness" of the curves (typically through penalities on the second derivative at the knots).
+Penalized splines help avoid over-fitting by regularizing the "wiggliness" of the curves. Here we use second differences of neighboring B-spline coefficients to measure wiggliness.
 
 ### My Learning Journey
 My quest to figure out how to code up these models started at this [reply](https://discourse.julialang.org/t/generalized-additive-models-in-julia/10041/5?u=yahrmason) to the Julia Discourse thread linked above.
@@ -210,7 +210,7 @@ From the plot above, it can be seen the the resulting spline fit to the data is 
 
 ## Making it Smooth
 
-Smoothness is induced by enforcing a penalty on the second derivative at the knots.
+We induce smoothness with a penalty on second differences of neighboring B-spline coefficients.
 The first thing we need to do is build an identity matrix with diagonal the length of the number of basis functions and twice taking the difference of that matrix.
 To do this, we will first define a general function to take differences of matrices.
 
@@ -238,15 +238,15 @@ end
 D = DifferenceMatrix(Basis);
 ```
 
-The `D` matrix represents the second derivative at the knots, or breakpoints, of our spline.
-In order to induce smoothness in our function, we need to apply a penalty to these differences.
-We can do this by augmenting our objective function to minimize from standard OLS to:
+For a coefficient vector `β`, each row of `D * β` is a second difference: `β[j] - 2β[j+1] + β[j+2]`. These are differences along the coefficient sequence, not evaluations of the spline's second derivative at the knots. We penalize their squared magnitudes by minimizing:
 
 $$
-\lvert y - X\beta \rvert^2 + \lambda \int_a^b[f^{\prime\prime}(x)]^2 dx
+\lVert y - X\beta \rVert^2 + \lambda \lVert D\beta \rVert^2
 $$
 
-It took me a minute to really grasp what the following code is doing when I first read it. But essentially what we can do is mulitply the lambda parameter by our penalty matrix, `D` and row-append it to our basis design matrix, `X`. We then need to append zeros to our outcome vector to make sure the rows are equal between the two.
+This is a P-spline difference penalty, with penalty matrix `S = D' * D`. It encourages neighboring coefficient slopes to be similar. It is related to, but is not identical to, the integrated squared second-derivative penalty used for smoothing splines. In particular, our quantile-spaced knots are generally unevenly spaced, and `D` does not adjust for those spacings. Zero second differences imply coefficients that are affine in their index; they do not generally imply a straight line in `x` for this knot sequence. See [Eilers and Marx (1996)](https://doi.org/10.1214/ss/1038425655) for the difference-penalty construction.
+
+It took me a minute to really grasp what the following code is doing when I first read it. But essentially what we can do is multiply our difference matrix, `D`, by `sqrt(λ)` and row-append it to our basis design matrix, `X`. We then need to append zeros to our outcome vector to make sure the rows are equal between the two.
 What this allows us to do is use standard OLS to estimate the model coefficients with the lambda penalty applied. Typically when I see penalized regression models the parameters need to be estimated via some optimization algorithm. I just thought it was really cool to the clever use of OLS here.
 
 ```julia
