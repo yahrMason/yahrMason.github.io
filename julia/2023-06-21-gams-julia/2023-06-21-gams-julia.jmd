@@ -456,11 +456,11 @@ chain_smooth = sample(spline_mod, NUTS(), 1_000);
 summarystats(chain_smooth)
 ```
 
-We can then take the mean of the posterior for each parameter and build the spline predictions for each observation to compare with our previous models.
+For each posterior draw, we evaluate the expected outcome at each observed year. The columns of `pred_smooth` are draws of the mean curve; averaging across columns gives the posterior mean fit.
 
 ```julia
 # Get posterior draws for relevant parameters
-post_smooth = get(chain_smooth, [:α, :B, :b]);
+post_smooth = get(chain_smooth, [:α, :B, :b, :σ]);
 
 # Compute Predictions
 pred_smooth = [post_smooth[:α]...]' .+ X_fe * hcat(post_smooth[:B]...)' .+ Z_re * hcat(post_smooth[:b]...)';
@@ -475,12 +475,23 @@ plot!(x, Spline_opt.(x) .+ y_mean, color = :blue, linewidth = 3, label = "Spline
 plot!(x, mean(pred_smooth;dims=2) .+ y_mean, color = :green, linewidth = 3, label = "Spline: Bayes")
 ```
 
-Since our outcomes are so similar, what are we getting using the Bayesian model over optimizing the λ penalty? 
-Well, one benefit is that we can use the model posterior to build the [posterior predictive]() distribution for the outcome.
-This gives us a probability distribution over the outcome, which can be useful.
+The posterior draws let us distinguish two kinds of uncertainty. A credible interval for the mean curve describes uncertainty about the expected blossom date. A posterior predictive interval describes uncertainty about an observed blossom date and also includes residual variation.
 
-This is a way to take advantage of the full uncertainty quantification that a Bayes model gives us.
-The following Julia code demonstrates how we can leverage the full posterior for predictions by building a partial dependence plot.
+For each posterior draw `s`, we simulate `y_new[i, s] = pred_smooth[i, s] + σ[s] * ε[i, s]`, where `ε[i, s]` is an independent standard Normal draw. It is important to pair each mean-curve draw with the residual standard deviation from the same posterior draw.
+
+```julia
+function PosteriorPredictive(mean_draws::AbstractMatrix, sigma_draws::AbstractVector; rng=Random.default_rng())
+    size(mean_draws, 2) == length(sigma_draws) ||
+        throw(DimensionMismatch("Each mean-curve draw needs one residual standard deviation"))
+    noise = randn(rng, size(mean_draws)...)
+    return mean_draws .+ noise .* reshape(sigma_draws, 1, :)
+end
+
+sigma_draws = vec(hcat(post_smooth[:σ]...));
+pred_observed = PosteriorPredictive(pred_smooth, sigma_draws);
+```
+
+The helper below plots a pointwise 95% highest-density interval across draws. Applied to `pred_smooth` it summarizes the mean curve; applied to `pred_observed` it summarizes replicated observations at the same years. These are pointwise intervals, not a simultaneous band for the entire curve or a held-out accuracy assessment.
 
 ```julia
 function PartialDepPlot(x,pred)
@@ -506,17 +517,20 @@ function PartialDepPlot(x,pred)
     return plt;
 end
 
-# Plot the HDI
-PartialDepPlot(x, pred_smooth)
-plot!(x, Spline_opt.(x), color = :blue, linewidth = 3, label = "Spline: λ = $(round(λ_opt,digits=3))")
-scatter!(
-    x, y,
-    color=:blue,
-    xlabel="Year",
-    ylabel="Day of First Blossom",
-    legend=false,
-    alpha=0.2
-)
+# Return both sets of draws to the original day-of-year scale.
+p_mean = PartialDepPlot(x, pred_smooth .+ y_mean);
+plot!(p_mean, x, Spline_opt.(x) .+ y_mean, color=:blue, label="Penalized spline");
+title!(p_mean, "Mean curve: 95% credible interval");
+
+p_observed = PartialDepPlot(x, pred_observed .+ y_mean);
+title!(p_observed, "Observations: 95% predictive interval");
+
+for p in (p_mean, p_observed)
+    scatter!(p, x, y .+ y_mean, color=:blue, alpha=0.2, legend=false);
+    xlabel!(p, "Year");
+    ylabel!(p, "Day of First Blossom");
+end
+plot(p_mean, p_observed, layout=(2, 1), size=(900, 700))
 ```
 
 ## More Variables: Building an Additive Model
