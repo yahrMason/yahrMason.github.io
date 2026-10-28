@@ -418,7 +418,9 @@ For those looking for a more detailed explanation of this math, I will have to p
 One thing to note on terminology, Bayesian Hierarchical are sometimes called "Random Effects" models, and models with no established hierarchy are referred to as "Fixed Effects" models.
 Models with hierarchical and non-hierarchical variables are called "Mixed Effect" models (having both random and fixed variables). For the example below, I will adopt the terminology of "random" and "fixed" effects.
 
-From this Julia code, the resulting `X_fe` matrix represents the fixed effects matrix and `Z_re` represents the random effect matrix.
+The transformed basis has two unpenalized columns whose sum is the constant function. To keep a single intercept `α`, we retain only the second column and center it over the training observations. We also center every random-effect column, so each smooth has zero average contribution and `α` represents the overall mean. This leaves the space of fitted curves and the difference penalty unchanged.
+
+For predictions at new predictor values, reuse the training basis and subtract these same training column means; do not recompute the centering on the prediction data.
 
 {% highlight julia %}
 # Function to build the Mixed Effect Matricies
@@ -435,18 +437,19 @@ function MixedEffectMatrix(Basis::BSplineBasis{Vector{Float64}}, x::AbstractVect
     D_pls[diagind(D_pls)] .= 1;
     XSD = (UpperTriangular(D_pls') \ X')';
 
-    # Split to Fixed and Random Effects
-    X_fe = XSD[:, 1:2]; # Fixed
-    Z_re = XSD[:, 3:end]; # Random
+    # Keep one unpenalized direction; the model supplies the intercept.
+    X_fe = XSD[:, 2:2];
+    Z_re = XSD[:, 3:end];
+
+    # Each smooth contributes zero on average over the training data.
+    X_fe = X_fe .- mean(X_fe; dims=1);
+    Z_re = Z_re .- mean(Z_re; dims=1);
 
     return X_fe, Z_re
 end
 
 X_fe, Z_re = MixedEffectMatrix(Basis, x);
 {% endhighlight %}
-
-
-
 
 The transformed random-effect coefficients are the second differences of the original spline coefficients: `b = D * β`. Giving them a common zero-mean Normal prior shrinks these differences toward zero. We learn the shared standard deviation `σ_b` from the data, so this is still a hierarchical model: smaller values imply stronger smoothing. Estimating an additional mean for `b` would instead shrink the differences toward a potentially nonzero value.
 
@@ -477,7 +480,7 @@ We can now define our Turing model to fit the hierarchical smoothing spline mode
     α ~ Normal(μ_int, σ_prior)
 
     # Fixed Effects
-    B ~ MvNormal(repeat([0],2), σ_prior)
+    B ~ filldist(Normal(0, σ_prior), size(X_fe, 2))
     
     # Random Effects
     σ_b ~ Exponential(re_prior)
@@ -494,18 +497,15 @@ We can now define our Turing model to fit the hierarchical smoothing spline mode
 end;
 {% endhighlight %}
 
-
-
-
 We will use MCMC to perform inference. The following code will use the No U-turn (NUTS) sampler to draw 1000 samples from the posterior. Typically it is advised to run multiple chains, see the [Turing docs](https://turing.ml/v0.22/docs/using-turing/guide#sampling-multiple-chains), but for this demo we will use just a single chain.
 Turing has a lot of neat features, such as the ability to simply call `summarystats(chain)` to assess model convergence.
 
-One thing to note: Since we are fitting the y-intercept variable `α` in this model, there is no need to use the centered version of y here.
+We fit the centered outcome `y`, so the intercept prior is centered at zero. When plotting on the original day-of-year scale, we add `y_mean` back to each fitted draw.
 
 {% highlight julia %}
 # Define Model Function
-## Note adding y_mean back to y
-spline_mod = SmoothSplineModel(X_fe, Z_re, y .+ y_mean, 100, 10, 5, 5);
+## Use centered outcomes and a zero-centered intercept prior
+spline_mod = SmoothSplineModel(X_fe, Z_re, y, 0, 10, 10, 10);
 
 # MCMC Sampling
 chain_smooth = sample(spline_mod, NUTS(), 1_000);
@@ -513,7 +513,6 @@ chain_smooth = sample(spline_mod, NUTS(), 1_000);
 # Summary
 summarystats(chain_smooth)
 {% endhighlight %}
-
 
 We can then take the mean of the posterior for each parameter and build the spline predictions for each observation to compare with our previous models.
 
@@ -525,22 +524,14 @@ post_smooth = get(chain_smooth, [:α, :B, :b]);
 pred_smooth = [post_smooth[:α]...]' .+ X_fe * hcat(post_smooth[:B]...)' .+ Z_re * hcat(post_smooth[:b]...)';
 {% endhighlight %}
 
-
-
-
 The following plot compares the original spline model to the smoothing spline model that we just fit. As we can see, the smoothing spline fit looks far smoother despite having the exact same number of knots and basis functions as the original model.
 
 {% highlight julia %}
 # Plot Data and Splines
 PlotCherryData(alpha=0.2)
 plot!(x, Spline_opt.(x) .+ y_mean, color = :blue, linewidth = 3, label = "Spline: λ = $(round(λ_opt,digits=3))")
-plot!(x, mean(pred_smooth;dims=2), color = :green, linewidth = 3, label = "Spline: Bayes")
+plot!(x, mean(pred_smooth;dims=2) .+ y_mean, color = :green, linewidth = 3, label = "Spline: Bayes")
 {% endhighlight %}
-
-
-
-
-
 
 Since our outcomes are so similar, what are we getting using the Bayesian model over optimizing the λ penalty? 
 Well, one benefit is that we can use the model posterior to build the [posterior predictive]() distribution for the outcome.
@@ -575,8 +566,9 @@ end
 
 # Plot the HDI
 PartialDepPlot(x, pred_smooth)
+plot!(x, Spline_opt.(x), color = :blue, linewidth = 3, label = "Spline: λ = $(round(λ_opt,digits=3))")
 scatter!(
-    x, y .+ y_mean,
+    x, y,
     color=:blue,
     xlabel="Year",
     ylabel="Day of First Blossom",
@@ -584,11 +576,6 @@ scatter!(
     alpha=0.2
 )
 {% endhighlight %}
-
-
-
-
-
 
 ## More Variables: Building an Additive Model
 
@@ -616,11 +603,6 @@ plot(
 )
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_20_1.png) 
-
-
-
-
 The relationships look like they could be fairly well modeled with a standard linear model. We will see how the smoothing splines approximate these relationships.
 
 The following code loads the data set and performs the data-preprocessing steps from above.
@@ -639,9 +621,6 @@ X_fe = [X_fe_1, X_fe_2];
 Z_re = [Z_re_1, Z_re_2];
 {% endhighlight %}
 
-
-
-
 Next, we will define a Turing Model similar to the one above, but this model now builds two smoothing splines instead of one.
 I am certain there is a more elegant "Julian" way to build this, but for now the verbose approach will suffice.
 
@@ -655,9 +634,9 @@ I am certain there is a more elegant "Julian" way to build this, but for now the
 
     # Fixed Effects
     ## Variable 1
-    B1 ~ MvNormal(repeat([0],2), σ_prior)
+    B1 ~ filldist(Normal(0, σ_prior), size(X_fe[1], 2))
     ## Variable 2
-    B2 ~ MvNormal(repeat([0],2), σ_prior)
+    B2 ~ filldist(Normal(0, σ_prior), size(X_fe[2], 2))
     
     # Random Effects
     ## Variable 1
@@ -677,9 +656,6 @@ I am certain there is a more elegant "Julian" way to build this, but for now the
     y ~ MvNormal(μ, σ)
 end;
 {% endhighlight %}
-
-
-
 
 Next, we will instantiate our model, run MCMC to assess parameter posterior values, and build predictions.
 
@@ -702,9 +678,6 @@ pred_add_2 = X_fe_2 * hcat(post_add[:B2]...)' +  Z_re_2 * hcat(post_add[:b2]...)
 pred_add = [post_add[:α]...]' .+ (pred_add_1 + pred_add_2);
 {% endhighlight %}
 
-
-
-
 And inspect our partial dependence plots.
 
 {% highlight julia %}
@@ -713,13 +686,8 @@ xlabel!(GirthPlot, "Tree Girth");
 HeightPlot = PartialDepPlot(x2, pred_add_2);
 xlabel!(HeightPlot, "Tree Height");
 plot(GirthPlot, HeightPlot, plot_title = "Partial Dependence Plots")
-ylabel!("Tree Volume")
+ylabel!("Contribution to Tree Volume")
 {% endhighlight %}
-
-
-
-
-
 
 Lastly, we can observe the relationship between actual and predicted tree volume.
 
@@ -737,11 +705,6 @@ annotate!((20, 60, "R2: $(round(RSqrd,digits=3))"));
 xlabel!("Tree Volume");
 ylabel!("Predicted Volume")
 {% endhighlight %}
-
-
-
-
-
 
 Obviously we would need to hold out some data to properly assess model accuracy.
 

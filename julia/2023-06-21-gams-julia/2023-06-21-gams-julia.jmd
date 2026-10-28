@@ -360,7 +360,9 @@ For those looking for a more detailed explanation of this math, I will have to p
 One thing to note on terminology, Bayesian Hierarchical are sometimes called "Random Effects" models, and models with no established hierarchy are referred to as "Fixed Effects" models.
 Models with hierarchical and non-hierarchical variables are called "Mixed Effect" models (having both random and fixed variables). For the example below, I will adopt the terminology of "random" and "fixed" effects.
 
-From this Julia code, the resulting `X_fe` matrix represents the fixed effects matrix and `Z_re` represents the random effect matrix.
+The transformed basis has two unpenalized columns whose sum is the constant function. To keep a single intercept `α`, we retain only the second column and center it over the training observations. We also center every random-effect column, so each smooth has zero average contribution and `α` represents the overall mean. This leaves the space of fitted curves and the difference penalty unchanged.
+
+For predictions at new predictor values, reuse the training basis and subtract these same training column means; do not recompute the centering on the prediction data.
 
 ```julia
 # Function to build the Mixed Effect Matricies
@@ -377,9 +379,13 @@ function MixedEffectMatrix(Basis::BSplineBasis{Vector{Float64}}, x::AbstractVect
     D_pls[diagind(D_pls)] .= 1;
     XSD = (UpperTriangular(D_pls') \ X')';
 
-    # Split to Fixed and Random Effects
-    X_fe = XSD[:, 1:2]; # Fixed
-    Z_re = XSD[:, 3:end]; # Random
+    # Keep one unpenalized direction; the model supplies the intercept.
+    X_fe = XSD[:, 2:2];
+    Z_re = XSD[:, 3:end];
+
+    # Each smooth contributes zero on average over the training data.
+    X_fe = X_fe .- mean(X_fe; dims=1);
+    Z_re = Z_re .- mean(Z_re; dims=1);
 
     return X_fe, Z_re
 end
@@ -416,7 +422,7 @@ We can now define our Turing model to fit the hierarchical smoothing spline mode
     α ~ Normal(μ_int, σ_prior)
 
     # Fixed Effects
-    B ~ MvNormal(repeat([0],2), σ_prior)
+    B ~ filldist(Normal(0, σ_prior), size(X_fe, 2))
     
     # Random Effects
     σ_b ~ Exponential(re_prior)
@@ -436,11 +442,11 @@ end;
 We will use MCMC to perform inference. The following code will use the No U-turn (NUTS) sampler to draw 1000 samples from the posterior. Typically it is advised to run multiple chains, see the [Turing docs](https://turing.ml/v0.22/docs/using-turing/guide#sampling-multiple-chains), but for this demo we will use just a single chain.
 Turing has a lot of neat features, such as the ability to simply call `summarystats(chain)` to assess model convergence.
 
-One thing to note: Since we are fitting the y-intercept variable `α` in this model, there is no need to use the centered version of y here.
+We fit the centered outcome `y`, so the intercept prior is centered at zero. When plotting on the original day-of-year scale, we add `y_mean` back to each fitted draw.
 
 ```julia
 # Define Model Function
-## Note adding y_mean back to y
+## Use centered outcomes and a zero-centered intercept prior
 spline_mod = SmoothSplineModel(X_fe, Z_re, y, 0, 10, 10, 10);
 
 # MCMC Sampling
@@ -570,9 +576,9 @@ I am certain there is a more elegant "Julian" way to build this, but for now the
 
     # Fixed Effects
     ## Variable 1
-    B1 ~ MvNormal(repeat([0],2), σ_prior)
+    B1 ~ filldist(Normal(0, σ_prior), size(X_fe[1], 2))
     ## Variable 2
-    B2 ~ MvNormal(repeat([0],2), σ_prior)
+    B2 ~ filldist(Normal(0, σ_prior), size(X_fe[2], 2))
     
     # Random Effects
     ## Variable 1
@@ -622,7 +628,7 @@ xlabel!(GirthPlot, "Tree Girth");
 HeightPlot = PartialDepPlot(x2, pred_add_2);
 xlabel!(HeightPlot, "Tree Height");
 plot(GirthPlot, HeightPlot, plot_title = "Partial Dependence Plots")
-ylabel!("Tree Volume")
+ylabel!("Contribution to Tree Volume")
 ```
 
 Lastly, we can observe the relationship between actual and predicted tree volume.
