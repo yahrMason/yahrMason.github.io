@@ -125,7 +125,7 @@ end;
 PlotCherryData()
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_4_1.png) 
+
 
 
 
@@ -138,9 +138,9 @@ We will explore this relationship using B-Splines
 There are two parameters we need to define our basis with the `BSplines` package. These parameters are the number of knots (or breakpoints) and the order of the basis functions.
 It should be noted that the order of a basis function is equal to the degree plus 1. For example, if we want to use cubic basis functions (degree 3), the order is equal to `3+1=4`.
 
-For these data, we will use a cubic spline (order = 4). But how many knots should we choose? In this case, we will use 25 knots. The choice for using a relatively large number of knots will produce a rather "wiggly" fit.  In Chapter 4 section 2 of his text, Simon Wood recommends choosing a number of knots that is larger than needed and induce smoothing later.
+For these data, we will use a cubic spline (order = 4). But how many knots should we choose? In this case, we will use 15 knots. The choice for using a relatively large number of knots will produce a rather "wiggly" fit.  In Chapter 4 section 2 of his text, Simon Wood recommends choosing a number of knots that is larger than needed and induce smoothing later.
 
-The following code builds the knots at the quantiles of the independent variable and builds the basis.
+The following code builds the knots evenly across the range of the independent variable and builds the basis.
 We can simply call the `plot` function on the `basis` object to view the basis functions.
 
 {% highlight julia %}
@@ -148,10 +148,10 @@ We can simply call the `plot` function on the `basis` object to view the basis f
 N_KNOTS = 15;
 ORDER = 4; # third degree -> cubic basis
 
-function QuantileBasis(x::AbstractVector, n_knots::Int64, order::Int64)
+function EvenlySpacedBasis(x::AbstractVector, n_knots::Int64, order::Int64)
 
     # Build a list of the Knots (breakpoints)
-    KnotsList = quantile(x, range(0, 1; length=n_knots));
+    KnotsList = collect(range(minimum(x), maximum(x); length=n_knots));
 
     # Define the Basis Object
     Basis = BSplineBasis(order, KnotsList);
@@ -159,14 +159,14 @@ function QuantileBasis(x::AbstractVector, n_knots::Int64, order::Int64)
     return Basis
 end
 
-Basis = QuantileBasis(x, N_KNOTS, ORDER);
+Basis = EvenlySpacedBasis(x, N_KNOTS, ORDER);
 
 # Plot the Basis Functions
 plot(Basis, title = "Basis Functions", legend = false)
 xlabel!("Year")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_5_1.png) 
+
 
 
 
@@ -197,7 +197,7 @@ ylabel!("Observation Number")
 xlabel!("Basis Function")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_6_1.png) 
+
 
 
 
@@ -231,7 +231,7 @@ ylabel!("Basis * Weight")
 xlabel!("Year")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_8_1.png) 
+
 
 
 
@@ -252,7 +252,7 @@ plot!(
 )
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_9_1.png) 
+
 
 
 
@@ -298,7 +298,7 @@ $$
 \lVert y - X\beta \rVert^2 + \lambda \lVert D\beta \rVert^2
 $$
 
-This is a P-spline difference penalty, with penalty matrix `S = D' * D`. It encourages neighboring coefficient slopes to be similar. It is related to, but is not identical to, the integrated squared second-derivative penalty used for smoothing splines. In particular, our quantile-spaced knots are generally unevenly spaced, and `D` does not adjust for those spacings. Zero second differences imply coefficients that are affine in their index; they do not generally imply a straight line in `x` for this knot sequence. See [Eilers and Marx (1996)](https://doi.org/10.1214/ss/1038425655) for the difference-penalty construction.
+This is a P-spline difference penalty, with penalty matrix `S = D' * D`. It encourages neighboring coefficient slopes to be similar. It is related to, but is not identical to, the integrated squared second-derivative penalty used for smoothing splines. Evenly spaced knots give neighboring coefficient differences a consistent spacing in the predictor. Boundary behavior also depends on the repeated boundary knots. See [Eilers and Marx (1996)](https://doi.org/10.1214/ss/1038425655) for the difference-penalty construction.
 
 It took me a minute to really grasp what the following code is doing when I first read it. But essentially what we can do is multiply our difference matrix, `D`, by `sqrt(λ)` and row-append it to our basis design matrix, `X`. We then need to append zeros to our outcome vector to make sure the rows are equal between the two.
 What this allows us to do is use standard OLS to estimate the model coefficients with the lambda penalty applied. Typically when I see penalized regression models the parameters need to be estimated via some optimization algorithm. I just thought it was really cool to the clever use of OLS here.
@@ -331,7 +331,7 @@ plot!(x, Spline_OLS.(x) .+ y_mean, color = :black, linewidth = 3, label = "Basic
 plot!(x, Spline_penalized.(x) .+ y_mean, color = :red, linewidth = 3, label = "Penalized Spline")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_11_1.png) 
+
 
 
 
@@ -342,7 +342,7 @@ But how can we determine what the optimal value for lambda should be?
 ## Finding Optimal Penalty
 
 One obvious approach to finding the optimal penalty is to use cross validation. In his text, Wood outlines a method of using *Generalized Cross Validation* to determine the optimal penalty. I can't say that I have an intuitive understanding of this method, but it seems fairly similar to leave one out cross validation. 
-I was able to adapt Wood's R code from his text to Julia. The code for these functions are below, and the optimal lambda value for our example is calculated to be around 72.
+I was able to adapt Wood's R code from his text to Julia. The code for these functions are below, and the optimal lambda value is calculated below.
 
 {% highlight julia %}
 # Function to calculate GCV for given penalty
@@ -400,12 +400,12 @@ plot!(x, Spline_penalized.(x) .+ y_mean, color = :red, linewidth = 3, label = "S
 plot!(x, Spline_opt.(x) .+ y_mean, color = :blue, linewidth = 3, label = "Spline: λ = $(round(λ_opt,digits=3))")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_13_1.png) 
 
 
 
 
-It is clear that the blue spline, with penalty of λ = 72.198 is far smoother than the other splines we fit. That is exactly what we were looking for, but this is not the only avenue to obtain this result.
+
+The blue spline uses the penalty selected by GCV. The amount of smoothing is determined by the data and the chosen basis.
 
 ## Using a Bayesian Hierarchical Approach
 
@@ -623,8 +623,8 @@ The following code loads the data set and performs the data-preprocessing steps 
 
 {% highlight julia %}
 # Build Basis Functions
-Basis1 = QuantileBasis(x1, 10, 4);
-Basis2 = QuantileBasis(x2, 10, 4);
+Basis1 = EvenlySpacedBasis(x1, 10, 4);
+Basis2 = EvenlySpacedBasis(x2, 10, 4);
 
 # Build Mixed Effects Matrices
 X_fe_1, Z_re_1 = MixedEffectMatrix(Basis1, x1);
