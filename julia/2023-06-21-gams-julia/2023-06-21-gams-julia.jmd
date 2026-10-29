@@ -463,7 +463,7 @@ For each posterior draw, we evaluate the expected outcome at each observed year.
 post_smooth = get(chain_smooth, [:α, :B, :b, :σ]);
 
 # Compute Predictions
-pred_smooth = [post_smooth[:α]...]' .+ X_fe * hcat(post_smooth[:B]...)' .+ Z_re * hcat(post_smooth[:b]...)';
+pred_smooth = [post_smooth[:α]...]' .+ X_fe * hcat(post_smooth[:B]...) .+ Z_re * hcat(post_smooth[:b]...)';
 ```
 
 The following plot compares the original spline model to the smoothing spline model that we just fit. As we can see, the smoothing spline fit looks far smoother despite having the exact same number of knots and basis functions as the original model.
@@ -627,9 +627,9 @@ post_add = get(chain_add, [:α, :B1, :B2, :b1, :b2]);
 
 # Compute Predictions
 ## Girth
-pred_add_1 = X_fe_1 * hcat(post_add[:B1]...)' +  Z_re_1 * hcat(post_add[:b1]...)';
+pred_add_1 = X_fe_1 * hcat(post_add[:B1]...) +  Z_re_1 * hcat(post_add[:b1]...)';
 ## Height
-pred_add_2 = X_fe_2 * hcat(post_add[:B2]...)' +  Z_re_2 * hcat(post_add[:b2]...)';
+pred_add_2 = X_fe_2 * hcat(post_add[:B2]...) +  Z_re_2 * hcat(post_add[:b2]...)';
 ## Volume
 pred_add = [post_add[:α]...]' .+ (pred_add_1 + pred_add_2);
 ```
