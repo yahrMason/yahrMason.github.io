@@ -84,6 +84,7 @@ first(data, 5)
 {% endhighlight %}
 
 
+```text
 5×5 DataFrame
  Row │ year   doy      temp     temp_upper  temp_lower
      │ Int64  Float64  String7  String7     String7
@@ -93,6 +94,7 @@ first(data, 5)
    3 │   831     96.0  NA       NA          NA
    4 │   851    108.0  7.38     12.1        2.66
    5 │   853    104.0  NA       NA          NA
+```
 
 
 
@@ -530,6 +532,7 @@ summarystats(chain_smooth)
 {% endhighlight %}
 
 
+```text
 Summary Statistics
   parameters      mean       std   naive_se      mcse         ess      rhat
     ⋯
@@ -574,6 +577,7 @@ Summary Statistics
     ⋱
                                                      1 column and 2 rows om
 itted
+```
 
 
 
