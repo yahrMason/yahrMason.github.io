@@ -19,7 +19,7 @@ As a data scientist looking to learn more about Julia, I thought it would be a w
 GAMs are tools that allow us to model an outcome variable as the sum of different functions over the input variables.
 Typically, these functions are smooth function approximations called called splines, but this is not necessary for GAMs.
 A common approach to building splines is to use [basis functions](https://en.wikipedia.org/wiki/Basis_function#:~:text=In%20mathematics%2C%20a%20basis%20function,linear%20combination%20of%20basis%20vectors.), which allow us to build arbitrarily "wiggly" curves to fit the data.
-Smoothing splines help avoid over-fitting by regularizing the "wiggliness" of the curves (typically through penalities on the second derivative at the knots).
+Penalized splines help avoid over-fitting by regularizing the "wiggliness" of the curves. Here we use second differences of neighboring B-spline coefficients to measure wiggliness.
 
 ### My Learning Journey
 My quest to figure out how to code up these models started at this [reply](https://discourse.julialang.org/t/generalized-additive-models-in-julia/10041/5?u=yahrmason) to the Julia Discourse thread linked above.
@@ -125,7 +125,7 @@ end;
 PlotCherryData()
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_4_1.png) 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_4_1.png)
 
 
 
@@ -133,14 +133,14 @@ PlotCherryData()
 From the plot we can see what appears to be a non-linear relationship between the year and day of first blossom.
 We will explore this relationship using B-Splines
 
-## Building the Basis 
+## Building the Basis
 
 There are two parameters we need to define our basis with the `BSplines` package. These parameters are the number of knots (or breakpoints) and the order of the basis functions.
 It should be noted that the order of a basis function is equal to the degree plus 1. For example, if we want to use cubic basis functions (degree 3), the order is equal to `3+1=4`.
 
-For these data, we will use a cubic spline (order = 4). But how many knots should we choose? In this case, we will use 25 knots. The choice for using a relatively large number of knots will produce a rather "wiggly" fit.  In Chapter 4 section 2 of his text, Simon Wood recommends choosing a number of knots that is larger than needed and induce smoothing later.
+For these data, we will use a cubic spline (order = 4). But how many knots should we choose? In this case, we will use 15 knots. The choice for using a relatively large number of knots will produce a rather "wiggly" fit.  In Chapter 4 section 2 of his text, Simon Wood recommends choosing a number of knots that is larger than needed and induce smoothing later.
 
-The following code builds the knots at the quantiles of the independent variable and builds the basis.
+The following code builds the knots evenly across the range of the independent variable and builds the basis.
 We can simply call the `plot` function on the `basis` object to view the basis functions.
 
 {% highlight julia %}
@@ -148,10 +148,10 @@ We can simply call the `plot` function on the `basis` object to view the basis f
 N_KNOTS = 15;
 ORDER = 4; # third degree -> cubic basis
 
-function QuantileBasis(x::AbstractVector, n_knots::Int64, order::Int64)
+function EvenlySpacedBasis(x::AbstractVector, n_knots::Int64, order::Int64)
 
     # Build a list of the Knots (breakpoints)
-    KnotsList = quantile(x, range(0, 1; length=n_knots));
+    KnotsList = collect(range(minimum(x), maximum(x); length=n_knots));
 
     # Define the Basis Object
     Basis = BSplineBasis(order, KnotsList);
@@ -159,20 +159,20 @@ function QuantileBasis(x::AbstractVector, n_knots::Int64, order::Int64)
     return Basis
 end
 
-Basis = QuantileBasis(x, N_KNOTS, ORDER);
+Basis = EvenlySpacedBasis(x, N_KNOTS, ORDER);
 
 # Plot the Basis Functions
 plot(Basis, title = "Basis Functions", legend = false)
 xlabel!("Year")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_5_1.png) 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_5_1.png)
 
 
 
 
 In order to fit our spline regression model, we need to build a design matrix from our basis object.
-The following code builds our design matrix and plots the matrix using the `heatmap` function. 
+The following code builds our design matrix and plots the matrix using the `heatmap` function.
 The plot displayed below outlines the relative weighting that each basis function has on each value of the domain before it is fit.
 
 {% highlight julia %}
@@ -180,13 +180,13 @@ The plot displayed below outlines the relative weighting that each basis functio
 function BasisMatrix(Basis::BSplineBasis{Vector{Float64}}, x::AbstractVector)
     splines = vec(
         mapslices(
-            x -> Spline(Basis,x), 
+            x -> Spline(Basis,x),
             diagm(ones(length(Basis))),
             dims=1
         )
     );
     X = hcat([s.(x) for s in splines]...)
-    return X 
+    return X
 end
 
 X = BasisMatrix(Basis, x);
@@ -197,7 +197,7 @@ ylabel!("Observation Number")
 xlabel!("Basis Function")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_6_1.png) 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_6_1.png)
 
 
 
@@ -212,7 +212,7 @@ This struct has a lot of nice methods such as being able to pass in `x` values a
 
 {% highlight julia %}
 # Fit model with basic OLS
-β_spline = coef(lm(X,y));
+β_spline = X \ y;
 # Define Spline Object
 Spline_OLS = Spline(Basis, β_spline);
 {% endhighlight %}
@@ -224,14 +224,14 @@ The plots below displays the resulting weighed basis functions, and the resultin
 One thing to note, interpreting this plot is why we centered our `doy` variable. It makes the relative basis weightings easier to distinguish.
 
 {% highlight julia %}
-# Plot Weighted Basis 
+# Plot Weighted Basis
 plot(x, β_spline .* Basis, title = "Weighted Basis Functions", label = "")
 plot!(x, Spline_OLS, color = :black, linewidth = 3, label = "Spline Fit", legend = true)
 ylabel!("Basis * Weight")
 xlabel!("Year")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_8_1.png) 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_8_1.png)
 
 
 
@@ -245,14 +245,14 @@ PlotCherryData(alpha = 0.20)
 plot!(
     x,
     # evaluate spline at x and add mean
-    Spline_OLS.(x) .+ y_mean, 
-    color = :black, 
-    linewidth = 3, 
+    Spline_OLS.(x) .+ y_mean,
+    color = :black,
+    linewidth = 3,
     label = "Spline Fit"
 )
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_9_1.png) 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_9_1.png)
 
 
 
@@ -261,7 +261,7 @@ From the plot above, it can be seen the the resulting spline fit to the data is 
 
 ## Making it Smooth
 
-Smoothness is induced by enforcing a penalty on the second derivative at the knots.
+We induce smoothness with a penalty on second differences of neighboring B-spline coefficients.
 The first thing we need to do is build an identity matrix with diagonal the length of the number of basis functions and twice taking the difference of that matrix.
 To do this, we will first define a general function to take differences of matrices.
 
@@ -292,15 +292,15 @@ D = DifferenceMatrix(Basis);
 
 
 
-The `D` matrix represents the second derivative at the knots, or breakpoints, of our spline.
-In order to induce smoothness in our function, we need to apply a penalty to these differences.
-We can do this by augmenting our objective function to minimize from standard OLS to:
+For a coefficient vector `β`, each row of `D * β` is a second difference: `β[j] - 2β[j+1] + β[j+2]`. These are differences along the coefficient sequence, not evaluations of the spline's second derivative at the knots. We penalize their squared magnitudes by minimizing:
 
 $$
-\lvert y - X\beta \rvert^2 + \lambda \int_a^b[f^{\prime\prime}(x)]^2 dx
+\lVert y - X\beta \rVert^2 + \lambda \lVert D\beta \rVert^2
 $$
 
-It took me a minute to really grasp what the following code is doing when I first read it. But essentially what we can do is mulitply the lambda parameter by our penalty matrix, `D` and row-append it to our basis design matrix, `X`. We then need to append zeros to our outcome vector to make sure the rows are equal between the two.
+This is a P-spline difference penalty, with penalty matrix `S = D' * D`. It encourages neighboring coefficient slopes to be similar. It is related to, but is not identical to, the integrated squared second-derivative penalty used for smoothing splines. Evenly spaced knots give neighboring coefficient differences a consistent spacing in the predictor. Boundary behavior also depends on the repeated boundary knots. See [Eilers and Marx (1996)](https://doi.org/10.1214/ss/1038425655) for the difference-penalty construction.
+
+It took me a minute to really grasp what the following code is doing when I first read it. But essentially what we can do is multiply our difference matrix, `D`, by `sqrt(λ)` and row-append it to our basis design matrix, `X`. We then need to append zeros to our outcome vector to make sure the rows are equal between the two.
 What this allows us to do is use standard OLS to estimate the model coefficients with the lambda penalty applied. Typically when I see penalized regression models the parameters need to be estimated via some optimization algorithm. I just thought it was really cool to the clever use of OLS here.
 
 {% highlight julia %}
@@ -321,7 +321,7 @@ end
 Xp, yp = PenaltyMatrix(Basis, λ, x, y);
 
 # Fit Penalized Spline
-β_penalized = coef(lm(Xp,yp));
+β_penalized = Xp \ yp;
 # Define Penalized Spline Object
 Spline_penalized = Spline(Basis, β_penalized);
 
@@ -331,7 +331,7 @@ plot!(x, Spline_OLS.(x) .+ y_mean, color = :black, linewidth = 3, label = "Basic
 plot!(x, Spline_penalized.(x) .+ y_mean, color = :red, linewidth = 3, label = "Penalized Spline")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_11_1.png) 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_11_1.png)
 
 
 
@@ -341,27 +341,38 @@ But how can we determine what the optimal value for lambda should be?
 
 ## Finding Optimal Penalty
 
-One obvious approach to finding the optimal penalty is to use cross validation. In his text, Wood outlines a method of using *Generalized Cross Validation* to determine the optimal penalty. I can't say that I have an intuitive understanding of this method, but it seems fairly similar to leave one out cross validation. 
-I was able to adapt Wood's R code from his text to Julia. The code for these functions are below, and the optimal lambda value for our example is calculated to be around 72.
+One obvious approach to finding the optimal penalty is to use cross validation. In his text, Wood outlines a method of using *Generalized Cross Validation* to determine the optimal penalty. I can't say that I have an intuitive understanding of this method, but it seems fairly similar to leave one out cross validation.
+I was able to adapt Wood's R code from his text to Julia. The code for these functions are below, and the optimal lambda value is calculated below.
 
 {% highlight julia %}
 # Function to calculate GCV for given penalty
 function GCV(param::AbstractVector, Basis::BSplineBasis{Vector{Float64}}, x::AbstractVector, y::AbstractVector)
-    n = length(Basis.breakpoints)
+    n = length(y)
     Xp, yp = PenaltyMatrix(Basis, param[1], x, y)
-    β = coef(lm(Xp,yp))
-    H = Xp*inv(Xp'Xp)Xp' # hat matrix
-    trF = sum(diag(H)[1:n])
-    y_hat = Xp*β
-    rss = sum((yp-y_hat)[1:n].^2) ## residual SS
-    gcv = n*rss/(n-trF)^2
+    β = Xp \ yp # Coef
+    H = Xp * ((Xp'Xp) \ Xp') # hat matrix
+    trF = sum(diag(H)[1:n]) # EDF
+    y_hat = Xp * β # predictions
+    rsd = y - y_hat[1:n] # residuals
+    rss = sum(rsd.^2) # residual SS
+    sig_hat = rss/(n-trF) # residual variance
+    gcv = sig_hat*n/(n-trF) # GCV score
     return gcv
 end
+
+rho = range(-9, 11, length = 90)
+out = []
+for i in 1:90
+    push!(out, GCV([exp(rho[i])], Basis, x, y))
+end
+plot(rho, out)
+
+rho[argmin(out)]
 
 # Function that Optimized Lambda based on GCV
 function OptimizeGCVLambda(Basis::BSplineBasis{Vector{Float64}}, x::AbstractVector, y::AbstractVector)
 
-    # optimization bounds     
+    # optimization bounds
     lower = [0]
     upper = [Inf]
     initial_lambda = [1.0]
@@ -369,8 +380,8 @@ function OptimizeGCVLambda(Basis::BSplineBasis{Vector{Float64}}, x::AbstractVect
     # Run Optimization
     inner_optimizer = GradientDescent()
     res = Optim.optimize(
-        lambda -> GCV(lambda, Basis, x, y), 
-        lower, upper, initial_lambda, 
+        lambda -> GCV(lambda, Basis, x, y),
+        lower, upper, initial_lambda,
         Fminbox(inner_optimizer)
     )
     return Optim.minimizer(res)[1]
@@ -388,7 +399,7 @@ Now that we have obtained an optimal value for lambda, we can build the penalize
 Xp_opt, yp_opt = PenaltyMatrix(Basis, λ_opt, x, y);
 
 # Fit Optimized Spline
-β_opt = coef(lm(Xp_opt,yp_opt));
+β_opt = Xp_opt \ yp_opt;
 # Define Optimized Spline Object
 Spline_opt = Spline(Basis, β_opt);
 
@@ -398,17 +409,17 @@ plot!(x, Spline_penalized.(x) .+ y_mean, color = :red, linewidth = 3, label = "S
 plot!(x, Spline_opt.(x) .+ y_mean, color = :blue, linewidth = 3, label = "Spline: λ = $(round(λ_opt,digits=3))")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_13_1.png) 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_13_1.png)
 
 
 
 
-It is clear that the blue spline, with penalty of λ = 72.198 is far smoother than the other splines we fit. That is exactly what we were looking for, but this is not the only avenue to obtain this result.
+The blue spline uses the penalty selected by GCV. The amount of smoothing is determined by the data and the chosen basis.
 
 ## Using a Bayesian Hierarchical Approach
 
 Now for the fun stuff. In order to use a Bayesian approach, we need to re-parameterize our model.
-Wood goes into detail on the theory of this parameterization on pages 173-174 of his text. The procedure involves some pretty low level linear algebra. 
+Wood goes into detail on the theory of this parameterization on pages 173-174 of his text. The procedure involves some pretty low level linear algebra.
 To be truthful, I do not have a good intuition of what the matrix algebra is doing for us here. But I was able to figure out how to translate the R code into Julia.
 
 For those looking for a more detailed explanation of this math, I will have to point you to Wood's [text](https://www.taylorfrancis.com/books/mono/10.1201/9781315370279/generalized-additive-models-simon-wood).
@@ -416,7 +427,9 @@ For those looking for a more detailed explanation of this math, I will have to p
 One thing to note on terminology, Bayesian Hierarchical are sometimes called "Random Effects" models, and models with no established hierarchy are referred to as "Fixed Effects" models.
 Models with hierarchical and non-hierarchical variables are called "Mixed Effect" models (having both random and fixed variables). For the example below, I will adopt the terminology of "random" and "fixed" effects.
 
-From this Julia code, the resulting `X_fe` matrix represents the fixed effects matrix and `Z_re` represents the random effect matrix.
+The transformed basis has two unpenalized columns whose sum is the constant function. To keep a single intercept `α`, we retain only the second column and center it over the training observations. We also center every random-effect column, so each smooth has zero average contribution and `α` represents the overall mean. This leaves the space of fitted curves and the difference penalty unchanged.
+
+For predictions at new predictor values, reuse the training basis and subtract these same training column means; do not recompute the centering on the prediction data.
 
 {% highlight julia %}
 # Function to build the Mixed Effect Matricies
@@ -433,9 +446,13 @@ function MixedEffectMatrix(Basis::BSplineBasis{Vector{Float64}}, x::AbstractVect
     D_pls[diagind(D_pls)] .= 1;
     XSD = (UpperTriangular(D_pls') \ X')';
 
-    # Split to Fixed and Random Effects
-    X_fe = XSD[:, 1:2]; # Fixed
-    Z_re = XSD[:, 3:end]; # Random
+    # Keep one unpenalized direction; the model supplies the intercept.
+    X_fe = XSD[:, 2:2];
+    Z_re = XSD[:, 3:end];
+
+    # Each smooth contributes zero on average over the training data.
+    X_fe = X_fe .- mean(X_fe; dims=1);
+    Z_re = Z_re .- mean(Z_re; dims=1);
 
     return X_fe, Z_re
 end
@@ -446,6 +463,16 @@ X_fe, Z_re = MixedEffectMatrix(Basis, x);
 
 
 
+The transformed random-effect coefficients are the second differences of the original spline coefficients: `b = D * β`. Giving them a common zero-mean Normal prior shrinks these differences toward zero. We learn the shared standard deviation `σ_b` from the data, so this is still a hierarchical model: smaller values imply stronger smoothing. Estimating an additional mean for `b` would instead shrink the differences toward a potentially nonzero value.
+
+Conditional on the scales, the likelihood and random-effect prior contribute the objective
+
+$$
+\lVert y - X_{fe} B - Z_{re} b - \alpha \rVert^2 + \frac{\sigma^2}{\sigma_b^2} \lVert b \rVert^2.
+$$
+
+Thus the corresponding smoothing parameter is `λ = σ² / σ_b²`. The proper priors on the fixed effects and intercept provide additional regularization.
+
 We can now define our Turing model to fit the hierarchical smoothing spline model. This model function accepts the following arguments:
 
   - `X_fe` is the fixed effect matrix;
@@ -453,31 +480,30 @@ We can now define our Turing model to fit the hierarchical smoothing spline mode
   - `y` is the element we want to predict;
   - `μ_int` is the center of the intercept prior;
   - `σ_prior` is the standard deviation of coefficient priors;
-  - `err_prior` defines the exponential prior on likelihood error;
-  - `re_prior` defines the exponential prior on random effect variance.
+  - `err_prior` is the scale (and mean) of the exponential prior on residual standard deviation `σ`;
+  - `re_prior` is the scale (and mean) of the exponential prior on random-effect standard deviation `σ_b`.
 
 {% highlight julia %}
 # Define Turing model
 @model function SmoothSplineModel(X_fe, Z_re, y, μ_int, σ_prior, err_prior, re_prior)
 
-    ## Priors 
+    ## Priors
     # Intercept
     α ~ Normal(μ_int, σ_prior)
 
     # Fixed Effects
-    B ~ MvNormal(repeat([0],2), σ_prior)
-    
+    B ~ filldist(Normal(0, σ_prior), size(X_fe, 2))
+
     # Random Effects
-    μ_b ~ Normal(0, σ_prior)
     σ_b ~ Exponential(re_prior)
-    b ~ filldist(Normal(μ_b, σ_b), size(Z_re)[2])
-    
+    b ~ filldist(Normal(0, σ_b), size(Z_re)[2])
+
     # error
     σ ~ Exponential(err_prior)
 
     ## Determined Variables
     μ = α .+ X_fe * B + Z_re * b
-    
+
     ## Likelihood
     y ~ MvNormal(μ, σ)
 end;
@@ -489,12 +515,12 @@ end;
 We will use MCMC to perform inference. The following code will use the No U-turn (NUTS) sampler to draw 1000 samples from the posterior. Typically it is advised to run multiple chains, see the [Turing docs](https://turing.ml/v0.22/docs/using-turing/guide#sampling-multiple-chains), but for this demo we will use just a single chain.
 Turing has a lot of neat features, such as the ability to simply call `summarystats(chain)` to assess model convergence.
 
-One thing to note: Since we are fitting the y-intercept variable `α` in this model, there is no need to use the centered version of y here.
+We fit the centered outcome `y`, so the intercept prior is centered at zero. When plotting on the original day-of-year scale, we add `y_mean` back to each fitted draw.
 
 {% highlight julia %}
 # Define Model Function
-## Note adding y_mean back to y
-spline_mod = SmoothSplineModel(X_fe, Z_re, y .+ y_mean, 100, 10, 5, 5);
+## Use centered outcomes and a zero-centered intercept prior
+spline_mod = SmoothSplineModel(X_fe, Z_re, y, 0, 10, 10, 10);
 
 # MCMC Sampling
 chain_smooth = sample(spline_mod, NUTS(), 1_000);
@@ -505,48 +531,48 @@ summarystats(chain_smooth)
 
 
 Summary Statistics
-  parameters       mean       std   naive_se      mcse        ess      rhat
+  parameters      mean       std   naive_se      mcse         ess      rhat
     ⋯
-      Symbol    Float64   Float64    Float64   Float64    Float64   Float64
+      Symbol   Float64   Float64    Float64   Float64     Float64   Float64
     ⋯
 
-           α   100.9578    5.6333     0.1781    0.2900   371.9183    0.9990
+           α   -0.0135    0.2076     0.0066    0.0063    700.8200    1.0016
     ⋯
-        B[1]    -1.1778    5.6998     0.1802    0.2881   356.6087    0.9991
+        B[1]    1.6262    2.1630     0.0684    0.0649    948.0613    0.9993
     ⋯
-        B[2]     1.2111    5.5418     0.1752    0.2848   369.8150    0.9990
+         σ_b    2.2675    1.1936     0.0377    0.1121     83.5857    1.0223
     ⋯
-         μ_b    -0.3800    0.6335     0.0200    0.0211   702.2543    0.9991
+        b[1]   -0.5294    2.4716     0.0782    0.1204    446.3147    1.0017
     ⋯
-         σ_b     2.2553    1.1081     0.0350    0.1023    76.1735    1.0261
+        b[2]    0.2423    2.2958     0.0726    0.0984    961.2150    1.0000
     ⋯
-        b[1]    -0.1599    2.1407     0.0677    0.0843   507.3550    0.9996
+        b[3]    0.3906    1.9305     0.0610    0.0596    970.1843    0.9994
     ⋯
-        b[2]    -0.8512    1.8899     0.0598    0.0674   527.4515    1.0007
+        b[4]   -0.9041    1.8032     0.0570    0.0535    699.5903    0.9994
     ⋯
-        b[3]    -2.0182    1.6583     0.0524    0.0862   336.3577    0.9990
+        b[5]   -1.6781    1.8205     0.0576    0.1026    308.3379    1.0105
     ⋯
-        b[4]    -0.5716    1.5628     0.0494    0.0594   800.0749    0.9997
+        b[6]    0.0707    1.8526     0.0586    0.1243    193.8439    1.0175
     ⋯
-        b[5]     0.7625    1.6226     0.0513    0.0569   890.2162    1.0007
+        b[7]   -0.3892    2.0567     0.0650    0.1505    144.9418    1.0106
     ⋯
-        b[6]     2.7054    2.2498     0.0711    0.1585   135.8350    1.0154
+        b[8]    2.9637    2.5077     0.0793    0.1898    128.0161    1.0112
     ⋯
-        b[7]    -2.3017    2.4691     0.0781    0.1916   117.8017    1.0097
+        b[9]   -1.0437    2.0891     0.0661    0.1595    127.9476    1.0181
     ⋯
-        b[8]     0.3076    1.7181     0.0543    0.0777   375.2523    0.9993
+       b[10]   -0.2519    1.6820     0.0532    0.0936    341.7697    1.0110
     ⋯
-        b[9]     0.1552    1.6209     0.0513    0.0622   605.8256    1.0024
+       b[11]   -0.4676    1.6328     0.0516    0.0840    478.4197    1.0058
     ⋯
-       b[10]    -0.7186    1.6908     0.0535    0.0960   281.5948    1.0052
+       b[12]   -0.1074    1.7288     0.0547    0.1077    237.1557    1.0081
     ⋯
-       b[11]     0.7085    1.8439     0.0583    0.1153   205.5236    1.0069
+       b[13]   -2.4934    1.7893     0.0566    0.0948    335.3722    1.0005
     ⋯
-       b[12]    -1.8647    1.7745     0.0561    0.0797   554.2207    1.0004
+       b[14]   -1.9210    1.8247     0.0577    0.0787    638.1248    1.0011
     ⋯
-      ⋮           ⋮          ⋮         ⋮          ⋮         ⋮          ⋮   
+      ⋮           ⋮         ⋮         ⋮          ⋮          ⋮          ⋮
     ⋱
-                                                     1 column and 4 rows om
+                                                     1 column and 2 rows om
 itted
 
 
@@ -554,14 +580,14 @@ itted
 
 
 
-We can then take the mean of the posterior for each parameter and build the spline predictions for each observation to compare with our previous models.
+For each posterior draw, we evaluate the expected outcome at each observed year. The columns of `pred_smooth` are draws of the mean curve; averaging across columns gives the posterior mean fit.
 
 {% highlight julia %}
 # Get posterior draws for relevant parameters
-post_smooth = get(chain_smooth, [:α, :B, :b]);
+post_smooth = get(chain_smooth, [:α, :B, :b, :σ]);
 
 # Compute Predictions
-pred_smooth = [post_smooth[:α]...]' .+ X_fe * hcat(post_smooth[:B]...)' .+ Z_re * hcat(post_smooth[:b]...)';
+pred_smooth = [post_smooth[:α]...]' .+ X_fe * hcat(post_smooth[:B]...) .+ Z_re * hcat(post_smooth[:b]...)';
 {% endhighlight %}
 
 
@@ -573,20 +599,34 @@ The following plot compares the original spline model to the smoothing spline mo
 # Plot Data and Splines
 PlotCherryData(alpha=0.2)
 plot!(x, Spline_opt.(x) .+ y_mean, color = :blue, linewidth = 3, label = "Spline: λ = $(round(λ_opt,digits=3))")
-plot!(x, mean(pred_smooth;dims=2), color = :green, linewidth = 3, label = "Spline: Bayes")
+plot!(x, mean(pred_smooth;dims=2) .+ y_mean, color = :green, linewidth = 3, label = "Spline: Bayes")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_18_1.png) 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_18_1.png)
 
 
 
 
-Since our outcomes are so similar, what are we getting using the Bayesian model over optimizing the λ penalty? 
-Well, one benefit is that we can use the model posterior to build the [posterior predictive]() distribution for the outcome.
-This gives us a probability distribution over the outcome, which can be useful.
+The posterior draws let us distinguish two kinds of uncertainty. A credible interval for the mean curve describes uncertainty about the expected blossom date. A posterior predictive interval describes uncertainty about an observed blossom date and also includes residual variation.
 
-This is a way to take advantage of the full uncertainty quantification that a Bayes model gives us.
-The following Julia code demonstrates how we can leverage the full posterior for predictions by building a partial dependence plot.
+For each posterior draw `s`, we simulate `y_new[i, s] = pred_smooth[i, s] + σ[s] * ε[i, s]`, where `ε[i, s]` is an independent standard Normal draw. It is important to pair each mean-curve draw with the residual standard deviation from the same posterior draw.
+
+{% highlight julia %}
+function PosteriorPredictive(mean_draws::AbstractMatrix, sigma_draws::AbstractVector; rng=Random.default_rng())
+    size(mean_draws, 2) == length(sigma_draws) ||
+        throw(DimensionMismatch("Each mean-curve draw needs one residual standard deviation"))
+    noise = randn(rng, size(mean_draws)...)
+    return mean_draws .+ noise .* reshape(sigma_draws, 1, :)
+end
+
+sigma_draws = vec(hcat(post_smooth[:σ]...));
+pred_observed = PosteriorPredictive(pred_smooth, sigma_draws);
+{% endhighlight %}
+
+
+
+
+The helper below plots a pointwise 95% highest-density interval across draws. Applied to `pred_smooth` it summarizes the mean curve; applied to `pred_observed` it summarizes replicated observations at the same years. These are pointwise intervals, not a simultaneous band for the entire curve or a held-out accuracy assessment.
 
 {% highlight julia %}
 function PartialDepPlot(x,pred)
@@ -603,7 +643,7 @@ function PartialDepPlot(x,pred)
     plt = plot(x, mean(pred;dims=2));
     plot!(
         plt,
-        x, hdi[:,1], 
+        x, hdi[:,1],
         fillrange = hdi[:,2],
         color = :green, fillcolor = :green,
         alpha = 0.25, fillalpha = 0.25,
@@ -612,19 +652,23 @@ function PartialDepPlot(x,pred)
     return plt;
 end
 
-# Plot the HDI
-PartialDepPlot(x, pred_smooth)
-scatter!(
-    x, y .+ y_mean,
-    color=:blue,
-    xlabel="Year",
-    ylabel="Day of First Blossom",
-    legend=false,
-    alpha=0.2
-)
+# Return both sets of draws to the original day-of-year scale.
+p_mean = PartialDepPlot(x, pred_smooth .+ y_mean);
+plot!(p_mean, x, Spline_opt.(x) .+ y_mean, color=:blue, label="Penalized spline");
+title!(p_mean, "Mean curve: 95% credible interval");
+
+p_observed = PartialDepPlot(x, pred_observed .+ y_mean);
+title!(p_observed, "Observations: 95% predictive interval");
+
+for p in (p_mean, p_observed)
+    scatter!(p, x, y .+ y_mean, color=:blue, alpha=0.2, legend=false);
+    xlabel!(p, "Year");
+    ylabel!(p, "Day of First Blossom");
+end
+plot(p_mean, p_observed, layout=(2, 1), size=(900, 700))
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_19_1.png) 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_20_1.png)
 
 
 
@@ -633,7 +677,7 @@ scatter!(
 
 Now that we have Julia code capable of building univariate smoothing splines, let's try our hand at building an additive model with two predictor variables.
 This example uses the `trees` dataset from the `RDatasets` package. The data set has three variables, tree volume, girth, and height.
-We will build an additive model that builds smooth splines over `Girth` and `Height` and predicts the tree `Volume`. 
+We will build an additive model that builds smooth splines over `Girth` and `Height` and predicts the tree `Volume`.
 This is the same data set that Simon Wood uses in section 4.3 of his text. But this example is going to differ in approach, it will use the Bayesian approach for our GAM model.
 
 First let's load the data and plot the relationships.
@@ -655,7 +699,7 @@ plot(
 )
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_20_1.png) 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_21_1.png)
 
 
 
@@ -666,8 +710,8 @@ The following code loads the data set and performs the data-preprocessing steps 
 
 {% highlight julia %}
 # Build Basis Functions
-Basis1 = QuantileBasis(x1, 10, 4);
-Basis2 = QuantileBasis(x2, 10, 4);
+Basis1 = EvenlySpacedBasis(x1, 10, 4);
+Basis2 = EvenlySpacedBasis(x2, 10, 4);
 
 # Build Mixed Effects Matrices
 X_fe_1, Z_re_1 = MixedEffectMatrix(Basis1, x1);
@@ -688,32 +732,30 @@ I am certain there is a more elegant "Julian" way to build this, but for now the
 # Define Additive Model that uses two splines
 @model function AdditiveModel(X_fe, Z_re, y, μ_int, σ_prior, err_prior, re_prior)
 
-    ## Priors 
+    ## Priors
     # Intercept
     α ~ Normal(μ_int, σ_prior)
 
     # Fixed Effects
     ## Variable 1
-    B1 ~ MvNormal(repeat([0],2), σ_prior)
+    B1 ~ filldist(Normal(0, σ_prior), size(X_fe[1], 2))
     ## Variable 2
-    B2 ~ MvNormal(repeat([0],2), σ_prior)
-    
+    B2 ~ filldist(Normal(0, σ_prior), size(X_fe[2], 2))
+
     # Random Effects
     ## Variable 1
-    μ_b1 ~ Normal(0, σ_prior)
     σ_b1 ~ Exponential(re_prior)
-    b1 ~ filldist(Normal(μ_b1, σ_b1), size(Z_re[1])[2])
+    b1 ~ filldist(Normal(0, σ_b1), size(Z_re[1])[2])
     ## Variable 2
-    μ_b2 ~ Normal(0, σ_prior)
     σ_b2 ~ Exponential(re_prior)
-    b2 ~ filldist(Normal(μ_b2, σ_b2), size(Z_re[2])[2])
-    
+    b2 ~ filldist(Normal(0, σ_b2), size(Z_re[2])[2])
+
     # error
     σ ~ Exponential(err_prior)
 
     ## Determined Variables
     μ = α .+ X_fe[1] * B1 + X_fe[2] * B2 + Z_re[1] * b1 + Z_re[2] * b2
-    
+
     ## Likelihood
     y ~ MvNormal(μ, σ)
 end;
@@ -736,9 +778,9 @@ post_add = get(chain_add, [:α, :B1, :B2, :b1, :b2]);
 
 # Compute Predictions
 ## Girth
-pred_add_1 = X_fe_1 * hcat(post_add[:B1]...)' +  Z_re_1 * hcat(post_add[:b1]...)';
+pred_add_1 = X_fe_1 * hcat(post_add[:B1]...) +  Z_re_1 * hcat(post_add[:b1]...)';
 ## Height
-pred_add_2 = X_fe_2 * hcat(post_add[:B2]...)' +  Z_re_2 * hcat(post_add[:b2]...)';
+pred_add_2 = X_fe_2 * hcat(post_add[:B2]...) +  Z_re_2 * hcat(post_add[:b2]...)';
 ## Volume
 pred_add = [post_add[:α]...]' .+ (pred_add_1 + pred_add_2);
 {% endhighlight %}
@@ -754,10 +796,10 @@ xlabel!(GirthPlot, "Tree Girth");
 HeightPlot = PartialDepPlot(x2, pred_add_2);
 xlabel!(HeightPlot, "Tree Height");
 plot(GirthPlot, HeightPlot, plot_title = "Partial Dependence Plots")
-ylabel!("Tree Volume")
+ylabel!("Contribution to Tree Volume")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_24_1.png) 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_25_1.png)
 
 
 
@@ -770,7 +812,7 @@ RSqrd = cor(y, mean(pred_add;dims=2))[1,1]^2
 
 # Plot Actual v Predictions
 scatter(
-    y, mean(pred_add;dims=2), 
+    y, mean(pred_add;dims=2),
     legend = false,
     plot_title = "Predicted Volume v Actual Volume"
 );
@@ -779,7 +821,7 @@ xlabel!("Tree Volume");
 ylabel!("Predicted Volume")
 {% endhighlight %}
 
-![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_25_1.png) 
+![png](/assets/2023-06-21-gams-julia_files/2023-06-21-gams-julia_26_1.png)
 
 
 
